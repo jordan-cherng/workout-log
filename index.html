@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- PapaParse for fast CSV parsing -->
+  <!-- PapaParse -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -158,10 +158,10 @@
     // -------------------------------------------------------------
     // ⚙️ 設定區：請填入你的 Google 試算表「發布到網路」的 CSV 連結
     // -------------------------------------------------------------
-    // 發布步驟：Google Sheets -> 檔案 -> 共用 -> 發布到網路 -> 選擇「Log」分頁 -> 格式選「CSV」-> 點擊發布並複製連結
+    // 範例：https://docs.google.com/spreadsheets/d/e/2PACX-xxxxxx/pub?gid=0&single=true&output=csv
     let SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1444351328&single=true&output=csv";
 
-    // 備用快照數據（若尚未設定 URL 或本機離線時自動使用）
+    // 備用快照數據
     const FALLBACK_LOG_CSV = `日期,動作名稱,1,2,3,4,5
 2026-11-03,負重倒掛捲腹,16kg * 10,16kg * 10,16kg * 10,,
 2026-11-03,槓鈴深蹲,30kg * 10,50kg * 10,50kg * 8,60kg * 8,
@@ -231,9 +231,8 @@
     let progressionChartInstance = null;
     let volumeChartInstance = null;
     let categoryChartInstance = null;
-    let parsedHistory = []; // Parsed workouts
+    let parsedHistory = [];
 
-    // 肌群分類對應表
     function getCategory(exName) {
       if (/深蹲|腿|分腿|RDL|臀推|箭步/.test(exName)) return '下肢';
       if (/推|肩|胸|三頭/.test(exName)) return '推力';
@@ -242,7 +241,6 @@
       return '其他';
     }
 
-    // 解析組數文字 (例如: 16kg * 10, 15 kg * 8, 45kg *10)
     function parseSet(setText) {
       if (!setText) return null;
       const clean = setText.toLowerCase().replace(/kg/g, '').replace(/ /g, '');
@@ -257,52 +255,78 @@
       return null;
     }
 
-    // 主處理器：解析 CSV
+    // 強健型 CSV 解析器：能自動適應標頭列在第 1 列或第 2 列
     function processCSVData(csvText, isLive = false) {
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          const rows = results.data;
-          const records = [];
+      const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
+      const rows = parsed.data;
+      if (!rows || rows.length === 0) return;
 
-          rows.forEach(row => {
-            const date = row['日期'] || row['Date'];
-            const ex = row['動作名稱'] || row['Exercise'];
-            if (!date || !ex || date.includes('日期') || date.includes('Date')) return;
-
-            const sets = [];
-            ['1', '2', '3', '4', '5'].forEach(col => {
-              if (row[col]) {
-                const s = parseSet(row[col]);
-                if (s) sets.push({ ...s, raw: row[col] });
-              }
-            });
-
-            if (sets.length > 0) {
-              const maxWeight = Math.max(...sets.map(s => s.weight));
-              const totalVolume = sets.reduce((acc, cur) => acc + cur.volume, 0);
-              records.push({
-                date: date.trim(),
-                exercise: ex.trim(),
-                sets: sets,
-                maxWeight: maxWeight,
-                volume: totalVolume,
-                category: getCategory(ex.trim())
-              });
-            }
-          });
-
-          // 按日期由舊到新排序
-          records.sort((a, b) => new Date(a.date) - new Date(b.date));
-          parsedHistory = records;
-
-          updateUI(isLive);
+      // 尋找真正包含「日期」或「Date」的標頭列
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const rowStr = rows[i].join(',');
+        if (rowStr.includes('日期') || rowStr.includes('Date')) {
+          headerIdx = i;
+          break;
         }
+      }
+
+      if (headerIdx === -1) {
+        console.error("找不到標頭列 (未找到包含 日期/Date 的列)");
+        return;
+      }
+
+      const headers = rows[headerIdx].map(h => (h || '').trim());
+      const dateCol = headers.findIndex(h => h === '日期' || h === 'Date');
+      const exCol = headers.findIndex(h => h === '動作名稱' || h === 'Exercise');
+
+      // 尋找組數 1, 2, 3, 4, 5
+      const setCols = [];
+      ['1', '2', '3', '4', '5'].forEach(num => {
+        const idx = headers.findIndex(h => h === num);
+        if (idx !== -1) setCols.push(idx);
       });
+      if (setCols.length === 0 && exCol !== -1) {
+        for (let c = exCol + 1; c <= exCol + 5; c++) {
+          setCols.push(c);
+        }
+      }
+
+      const records = [];
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const row = rows[i];
+        const date = (row[dateCol] || '').trim();
+        const ex = (row[exCol] || '').trim();
+        if (!date || !ex || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+
+        const sets = [];
+        setCols.forEach((colIdx, setNum) => {
+          const rawVal = (row[colIdx] || '').trim();
+          if (rawVal) {
+            const s = parseSet(rawVal);
+            if (s) sets.push({ ...s, raw: rawVal, setNum: setNum + 1 });
+          }
+        });
+
+        if (sets.length > 0) {
+          const maxWeight = Math.max(...sets.map(s => s.weight));
+          const totalVolume = sets.reduce((acc, cur) => acc + cur.volume, 0);
+          records.push({
+            date: date,
+            exercise: ex,
+            sets: sets,
+            maxWeight: maxWeight,
+            volume: totalVolume,
+            category: getCategory(ex)
+          });
+        }
+      }
+
+      records.sort((a, b) => new Date(a.date) - new Date(b.date));
+      parsedHistory = records;
+      updateUI(isLive);
     }
 
-    // 更新各圖表與 KPI
     function updateUI(isLive) {
       if (parsedHistory.length === 0) return;
 
@@ -312,23 +336,13 @@
         : `離線快照預覽中 (最新: ${latestDate})`;
       document.getElementById('tableSub').innerText = `訓練日期：${latestDate}`;
 
-      // 1. KPI Cards 計算
       updateKPICards();
-
-      // 2. 下拉選單填充
       populateExerciseDropdown();
 
-      // 3. 繪製動作階梯曲線
       const selectedExercise = document.getElementById('exerciseSelect').value || '槓鈴臥推';
       renderProgressionChart(selectedExercise);
-
-      // 4. 繪製容量柱狀圖
       renderVolumeChart();
-
-      // 5. 繪製肌群環形圖
       renderCategoryChart();
-
-      // 6. 填寫最新明細表格
       renderRecentTable(latestDate);
     }
 
@@ -369,7 +383,6 @@
       const exSet = new Set(parsedHistory.map(r => r.exercise));
       select.innerHTML = '';
 
-      // 排序優先常見大項
       const priority = ['槓鈴臥推', '槓鈴深蹲', '槓鈴RDL', '保加利亞分腿蹲', '輔助引體向上', '負重倒掛捲腹', '胸推機', '繩索Face pull'];
       const sortedEx = Array.from(exSet).sort((a, b) => {
         const idxA = priority.indexOf(a);
@@ -394,7 +407,7 @@
 
     function renderProgressionChart(exerciseName) {
       const filtered = parsedHistory.filter(r => r.exercise === exerciseName);
-      const labels = filtered.map(r => r.date.slice(5)); // MM-DD
+      const labels = filtered.map(r => r.date.slice(5));
       const dataWeights = filtered.map(r => r.maxWeight);
 
       const ctx = document.getElementById('progressionChart').getContext('2d');
@@ -439,13 +452,12 @@
     }
 
     function renderVolumeChart() {
-      // 依日期加總容量
       const dailyMap = {};
       parsedHistory.forEach(r => {
         dailyMap[r.date] = (dailyMap[r.date] || 0) + r.volume;
       });
 
-      const dates = Object.keys(dailyMap).sort().slice(-8); // 最近 8 次訓練
+      const dates = Object.keys(dailyMap).sort().slice(-8);
       const volumes = dates.map(d => Math.round(dailyMap[d]));
 
       const ctx = document.getElementById('volumeChart').getContext('2d');
@@ -531,26 +543,22 @@
       });
     }
 
-    // 下拉選單切換事件
     document.getElementById('exerciseSelect').addEventListener('change', function(e) {
       renderProgressionChart(e.target.value);
     });
 
-    // 遠端連動載入邏輯
     function fetchLatestData() {
-      const badge = document.getElementById('statusBadge');
       const text = document.getElementById('statusText');
       text.innerText = "連線更新中...";
 
       if (!SHEET_CSV_URL || SHEET_CSV_URL.includes("placeholder")) {
-        // 使用預載資料
         setTimeout(() => {
           processCSVData(FALLBACK_LOG_CSV, false);
         }, 300);
         return;
       }
 
-      fetch(SHEET_CSV_URL + '&t=' + Date.now()) // 加 timestamp 避免快取
+      fetch(SHEET_CSV_URL + '&t=' + Date.now())
         .then(response => {
           if (!response.ok) throw new Error("HTTP error " + response.status);
           return response.text();
@@ -565,7 +573,6 @@
         });
     }
 
-    // 頁面初始化
     window.addEventListener('DOMContentLoaded', fetchLatestData);
   </script>
 </body>
