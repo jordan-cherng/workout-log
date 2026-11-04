@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>重訓進度與即時視覺化分析儀表板</title>
+  <title>重訓進度與身體組成即時分析儀表板</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js -->
@@ -17,16 +17,16 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased p-4 md:p-8">
 
-  <div class="max-w-7xl mx-auto space-y-6">
+  <div class="max-w-7xl mx-auto space-y-8">
 
     <!-- Header & Config -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl card-shadow border border-slate-100 gap-4">
       <div>
         <div class="flex items-center space-x-3">
           <span class="text-3xl">🏋️</span>
-          <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">重訓進度即時監控儀表板</h1>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">重訓進度與身體組成即時監控</h1>
         </div>
-        <p class="text-sm text-slate-500 mt-1">連動 Google Sheets 即時資料，支援 GitHub Pages 免費託管與自動更新</p>
+        <p class="text-sm text-slate-500 mt-1">連動 Google Sheets（Log 訓練 + Body_Log 體態），全自動同步與數據分析</p>
       </div>
 
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
@@ -43,114 +43,201 @@
       </div>
     </header>
 
-    <!-- Top KPI Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴深蹲 巔峰</p>
-        <div class="flex items-baseline space-x-1.5 mt-2">
-          <span id="kpiSquat" class="text-3xl font-black text-indigo-600">-</span>
-          <span class="text-sm font-medium text-slate-500">kg</span>
+    <!-- SECTION 1: 身體測量與 InBody 數據分析 -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">🧬</span>
+          <h2 class="text-xl font-bold text-slate-900 tracking-tight">身體組成與 InBody 趨勢分析</h2>
         </div>
-        <p id="kpiSquatSub" class="text-xs text-slate-400 mt-1">-</p>
+        <span id="inbodyLatestDate" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+          最新測量：-
+        </span>
       </div>
 
-      <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴臥推 巔峰</p>
-        <div class="flex items-baseline space-x-1.5 mt-2">
-          <span id="kpiBench" class="text-3xl font-black text-indigo-600">-</span>
-          <span class="text-sm font-medium text-slate-500">kg</span>
+      <!-- InBody KPI Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">目前體重 (Weight)</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiBodyWeight" class="text-3xl font-black text-slate-800">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiBodyWeightDiff" class="text-xs mt-1 font-medium text-slate-400">-</p>
         </div>
-        <p id="kpiBenchSub" class="text-xs text-slate-400 mt-1">-</p>
-      </div>
 
-      <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴 RDL 巔峰</p>
-        <div class="flex items-baseline space-x-1.5 mt-2">
-          <span id="kpiRDL" class="text-3xl font-black text-indigo-600">-</span>
-          <span class="text-sm font-medium text-slate-500">kg</span>
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">骨骼肌重 (SMM)</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiSMM" class="text-3xl font-black text-indigo-600">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiSMMDiff" class="text-xs mt-1 font-medium text-slate-400">-</p>
         </div>
-        <p id="kpiRDLSub" class="text-xs text-slate-400 mt-1">-</p>
-      </div>
 
-      <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">負重倒掛捲腹 負重</p>
-        <div class="flex items-baseline space-x-1.5 mt-2">
-          <span id="kpiCore" class="text-3xl font-black text-indigo-600">-</span>
-          <span class="text-sm font-medium text-slate-500">kg</span>
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">體脂肪率 (PBF)</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiPBF" class="text-3xl font-black text-rose-500">-</span>
+            <span class="text-sm font-medium text-slate-500">%</span>
+          </div>
+          <p id="kpiPBFDiff" class="text-xs mt-1 font-medium text-slate-400">-</p>
         </div>
-        <p id="kpiCoreSub" class="text-xs text-slate-400 mt-1">-</p>
-      </div>
-    </div>
 
-    <!-- Main Progression Line Chart -->
-    <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-4">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">📈 動作力量階梯突破曲線</h2>
-          <p class="text-xs text-slate-400">即時抓取並解析所有組數中的最大承重</p>
-        </div>
-        <div class="flex items-center space-x-2 w-full sm:w-auto">
-          <label for="exerciseSelect" class="text-xs font-bold text-slate-600 whitespace-nowrap">選擇動作：</label>
-          <select id="exerciseSelect" class="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 font-medium">
-            <!-- Dynamically populated -->
-          </select>
-        </div>
-      </div>
-      <div class="relative h-72 md:h-80 w-full">
-        <canvas id="progressionChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Volume & Muscle Split Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">📊 近期訓練總容量 (Volume Load, kg)</h2>
-          <p class="text-xs text-slate-400">總容量 = 各組重量 × 次數（漸進式超負荷指標）</p>
-        </div>
-        <div class="relative h-64 w-full">
-          <canvas id="volumeChart"></canvas>
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">InBody 評分 / 內臟脂肪</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiScore" class="text-3xl font-black text-emerald-600">-</span>
+            <span class="text-sm font-medium text-slate-500">分</span>
+          </div>
+          <p id="kpiVFA" class="text-xs mt-1 font-medium text-slate-500">-</p>
         </div>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">🥧 肌群訓練比例 (推/拉/腿/核心)</h2>
-          <p class="text-xs text-slate-400">基於全部紀錄之總組數分佈</p>
+      <!-- InBody Charts (Dual Column) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Body Mass Split Chart -->
+        <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
+          <div>
+            <h3 class="text-md font-bold text-slate-900">📊 體重、骨骼肌重與體脂肪重變化 (kg)</h3>
+            <p class="text-xs text-slate-400">客觀驗證身體重組（增肌減脂）成效</p>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="bodyMassChart"></canvas>
+          </div>
         </div>
-        <div class="relative h-64 w-full flex items-center justify-center">
-          <canvas id="categoryChart"></canvas>
-        </div>
-      </div>
-    </div>
 
-    <!-- Recent Log Table -->
-    <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-4">
-      <div class="flex justify-between items-center">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">📋 最新單次訓練明細</h2>
-          <p id="tableSub" class="text-xs text-slate-400">載入中...</p>
+        <!-- Fat % & Visceral Fat Dual Axis Chart -->
+        <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
+          <div>
+            <h3 class="text-md font-bold text-slate-900">📉 體脂肪率 (%) 與 內臟脂肪面積 (cm²)</h3>
+            <p class="text-xs text-slate-400">雙軸趨勢：左軸為體脂率，右軸為內臟脂肪面積</p>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="bodyFatChart"></canvas>
+          </div>
         </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">動作名稱</th>
-              <th class="py-3 px-4">分類</th>
-              <th class="py-3 px-4">組 1</th>
-              <th class="py-3 px-4">組 2</th>
-              <th class="py-3 px-4">組 3</th>
-              <th class="py-3 px-4">組 4</th>
-              <th class="py-3 px-4">組 5</th>
-            </tr>
-          </thead>
-          <tbody id="recentTableBody" class="divide-y divide-slate-100">
-            <tr><td colspan="7" class="py-4 text-center text-slate-400">正在讀取最新數據...</td></tr>
-          </tbody>
-        </table>
+    </section>
+
+    <hr class="border-slate-200">
+
+    <!-- SECTION 2: 重訓力量與進度分析 -->
+    <section class="space-y-4">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">💪</span>
+        <h2 class="text-xl font-bold text-slate-900 tracking-tight">重訓力量與訓練容量監控</h2>
       </div>
-    </div>
+
+      <!-- Top Strength KPI Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴深蹲 巔峰</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiSquat" class="text-3xl font-black text-indigo-600">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiSquatSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴臥推 巔峰</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiBench" class="text-3xl font-black text-indigo-600">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiBenchSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴 RDL 巔峰</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiRDL" class="text-3xl font-black text-indigo-600">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiRDLSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">負重倒掛捲腹 負重</p>
+          <div class="flex items-baseline space-x-1.5 mt-2">
+            <span id="kpiCore" class="text-3xl font-black text-indigo-600">-</span>
+            <span class="text-sm font-medium text-slate-500">kg</span>
+          </div>
+          <p id="kpiCoreSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- Main Progression Line Chart -->
+      <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">📈 動作力量階梯突破曲線</h3>
+            <p class="text-xs text-slate-400">自動抓取最大負重；選擇「輔助引體向上」時全自動連動 Body_Log 計算真實淨拉力</p>
+          </div>
+          <div class="flex items-center space-x-2 w-full sm:w-auto">
+            <label for="exerciseSelect" class="text-xs font-bold text-slate-600 whitespace-nowrap">選擇動作：</label>
+            <select id="exerciseSelect" class="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 font-medium">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+        </div>
+        <div class="relative h-72 md:h-80 w-full">
+          <canvas id="progressionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Volume & Muscle Split Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">📊 近期訓練總容量 (Volume Load, kg)</h3>
+            <p class="text-xs text-slate-400">總容量 = 各組重量 × 次數（漸進式超負荷指標）</p>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="volumeChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">🥧 肌群訓練比例 (推/拉/腿/核心)</h3>
+            <p class="text-xs text-slate-400">基於全部紀錄之總組數分佈</p>
+          </div>
+          <div class="relative h-64 w-full flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Log Table -->
+      <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">📋 最新單次訓練明細</h3>
+            <p id="tableSub" class="text-xs text-slate-400">載入中...</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-100">
+              <tr>
+                <th class="py-3 px-4">動作名稱</th>
+                <th class="py-3 px-4">分類</th>
+                <th class="py-3 px-4">組 1</th>
+                <th class="py-3 px-4">組 2</th>
+                <th class="py-3 px-4">組 3</th>
+                <th class="py-3 px-4">組 4</th>
+                <th class="py-3 px-4">組 5</th>
+              </tr>
+            </thead>
+            <tbody id="recentTableBody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="py-4 text-center text-slate-400">正在讀取最新數據...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
   </div>
 
@@ -158,10 +245,13 @@
     // -------------------------------------------------------------
     // ⚙️ 設定區：請填入你的 Google 試算表「發布到網路」的 CSV 連結
     // -------------------------------------------------------------
-    // 範例：https://docs.google.com/spreadsheets/d/e/2PACX-xxxxxx/pub?gid=0&single=true&output=csv
+    // 1. 訓練紀錄 Log CSV 連結 (必填)
     let SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1444351328&single=true&output=csv";
 
-    // 備用快照數據
+    // 2. 體重與身體組成 Body_Log CSV 連結 (填入後全自動連動 InBody 與引體向上)
+    let WEIGHT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1338938678&single=true&output=csv";
+
+    // 備用快照數據 (當離線或尚未設定 URL 時使用)
     const FALLBACK_LOG_CSV = `日期,動作名稱,1,2,3,4,5
 2026-11-03,負重倒掛捲腹,16kg * 10,16kg * 10,16kg * 10,,
 2026-11-03,槓鈴深蹲,30kg * 10,50kg * 10,50kg * 8,60kg * 8,
@@ -228,11 +318,36 @@
 2026-07-15,槓鈴臥推,20kg * 10,30kg * 10,40kg * 10,40kg * 10,
 2026-07-06,槓鈴臥推,20kg * 8,30kg * 8,40kg * 8,40kg * 8,40kg * 8`;
 
+    // 內建 InBody 歷史數據快照
+    const FALLBACK_BODY_LOG = [
+      { date: '2026-03-27', weight: 78.4, smm: 30.4, fat: null, pbf: 30.5, vfa: null, bmr: null, score: null },
+      { date: '2026-04-05', weight: 78.5, smm: 30.6, fat: null, pbf: 29.8, vfa: null, bmr: null, score: null },
+      { date: '2026-04-10', weight: 77.0, smm: 30.3, fat: null, pbf: 29.3, vfa: null, bmr: null, score: null },
+      { date: '2026-04-17', weight: 76.6, smm: 30.1, fat: null, pbf: 29.2, vfa: 89.9, bmr: 1541, score: 64 },
+      { date: '2026-04-24', weight: 76.6, smm: 31.1, fat: 20.8, pbf: 27.2, vfa: 86.2, bmr: 1575, score: 67 },
+      { date: '2026-04-30', weight: 76.0, smm: 30.1, fat: null, pbf: 28.8, vfa: 89.0, bmr: 1539, score: null },
+      { date: '2026-05-10', weight: 76.0, smm: 30.9, fat: 20.5, pbf: 26.9, vfa: 85.4, bmr: 1570, score: 67 },
+      { date: '2026-05-15', weight: 75.4, smm: 30.5, fat: 20.8, pbf: 27.6, vfa: 84.5, bmr: 1549, score: 66 },
+      { date: '2026-05-22', weight: 73.6, smm: 29.4, fat: 20.6, pbf: 28.0, vfa: 83.1, bmr: 1515, score: 65 },
+      { date: '2026-06-04', weight: 74.7, smm: 30.0, fat: 20.4, pbf: 27.3, vfa: 83.9, bmr: 1542, score: 66 },
+      { date: '2026-06-12', weight: 74.0, smm: 30.5, fat: 19.0, pbf: 25.7, vfa: 77.1, bmr: 1558, score: 68 },
+      { date: '2026-06-26', weight: 74.3, smm: 30.8, fat: 19.2, pbf: 25.9, vfa: 78.0, bmr: 1560, score: 68 },
+      { date: '2026-07-02', weight: 73.7, smm: 29.9, fat: 19.7, pbf: 26.8, vfa: 80.2, bmr: 1535, score: 67 },
+      { date: '2026-10-16', weight: 78.3, smm: 31.3, fat: 22.1, pbf: 28.2, vfa: 88.6, bmr: 1585, score: 66 },
+      { date: '2026-10-30', weight: 77.7, smm: 31.9, fat: 20.7, pbf: 26.6, vfa: 85.9, bmr: 1602, score: 69 }
+    ];
+
+    let bodyWeightHistory = [...FALLBACK_BODY_LOG];
+    let parsedHistory = [];
+
+    // Chart instances
     let progressionChartInstance = null;
     let volumeChartInstance = null;
     let categoryChartInstance = null;
-    let parsedHistory = [];
+    let bodyMassChartInstance = null;
+    let bodyFatChartInstance = null;
 
+    // 肌群分類
     function getCategory(exName) {
       if (/深蹲|腿|分腿|RDL|臀推|箭步/.test(exName)) return '下肢';
       if (/推|肩|胸|三頭/.test(exName)) return '推力';
@@ -255,13 +370,246 @@
       return null;
     }
 
-    // 強健型 CSV 解析器：能自動適應標頭列在第 1 列或第 2 列
+    // ==========================================
+    // 🧬 處理 Body_Log 體重與身體組成數據
+    // ==========================================
+    function processWeightCSV(csvText) {
+      const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
+      const rows = parsed.data;
+      if (!rows || rows.length === 0) return;
+
+      // 尋找包含「日期」或「Date」的標頭
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const rowStr = rows[i].join(',');
+        if (rowStr.includes('日期') || rowStr.includes('Date')) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      if (headerIdx === -1) return;
+
+      const headers = rows[headerIdx].map(h => (h || '').trim());
+      const findCol = (kw) => headers.findIndex(h => h.includes(kw));
+
+      const colDate = findCol('日期') !== -1 ? findCol('日期') : findCol('Date');
+      const colWeight = findCol('體重');
+      const colSMM = findCol('骨骼肌');
+      const colFat = findCol('體脂肪重');
+      const colPBF = findCol('體脂肪率');
+      const colVFA = findCol('內臟脂肪');
+      const colBMR = findCol('基礎代謝');
+      const colScore = findCol('評分');
+
+      const records = [];
+      const num = (v) => {
+        if (!v) return null;
+        const n = parseFloat(v.toString().replace(/,/g, '').replace(/[^0-9.]/g, ''));
+        return isNaN(n) ? null : n;
+      };
+
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        const d = (r[colDate] || '').trim();
+        const w = num(r[colWeight]);
+        if (!d || !w || !/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+
+        records.push({
+          date: d,
+          weight: w,
+          smm: num(r[colSMM]),
+          fat: num(r[colFat]),
+          pbf: num(r[colPBF]),
+          vfa: num(r[colVFA]),
+          bmr: num(r[colBMR]),
+          score: num(r[colScore])
+        });
+      }
+
+      if (records.length > 0) {
+        records.sort((a, b) => new Date(a.date) - new Date(b.date));
+        bodyWeightHistory = records;
+        console.log("Body_Log 成功讀取 " + records.length + " 筆數據，最新體重：" + records[records.length - 1].weight + " kg");
+      }
+      updateBodyCompositionUI();
+    }
+
+    // 依據訓練日期，動態取得最貼合的身體重量 (用於輔助引體向上)
+    function getEstimatedBodyWeight(dateStr) {
+      if (!bodyWeightHistory || bodyWeightHistory.length === 0) return 77.7;
+      const targetTime = new Date(dateStr).getTime();
+      if (isNaN(targetTime)) return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
+
+      if (targetTime <= new Date(bodyWeightHistory[0].date).getTime()) return bodyWeightHistory[0].weight;
+      if (targetTime >= new Date(bodyWeightHistory[bodyWeightHistory.length - 1].date).getTime()) {
+        return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
+      }
+
+      for (let i = 0; i < bodyWeightHistory.length - 1; i++) {
+        const t1 = new Date(bodyWeightHistory[i].date).getTime();
+        const t2 = new Date(bodyWeightHistory[i+1].date).getTime();
+        if (targetTime >= t1 && targetTime <= t2) {
+          const ratio = (targetTime - t1) / (t2 - t1);
+          return Math.round((bodyWeightHistory[i].weight + ratio * (bodyWeightHistory[i+1].weight - bodyWeightHistory[i].weight)) * 10) / 10;
+        }
+      }
+      return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
+    }
+
+    // 更新 InBody 儀表板 UI (Cards + Charts)
+    function updateBodyCompositionUI() {
+      if (!bodyWeightHistory || bodyWeightHistory.length === 0) return;
+      const latest = bodyWeightHistory[bodyWeightHistory.length - 1];
+      const prev = bodyWeightHistory.length > 1 ? bodyWeightHistory[bodyWeightHistory.length - 2] : null;
+
+      document.getElementById('inbodyLatestDate').innerText = `最新測量：${latest.date}`;
+      document.getElementById('kpiBodyWeight').innerText = latest.weight;
+      if (prev && prev.weight) {
+        const diff = (latest.weight - prev.weight).toFixed(1);
+        const sign = diff > 0 ? `+${diff}` : `${diff}`;
+        document.getElementById('kpiBodyWeightDiff').innerText = `較上次 (${prev.date.slice(5)}): ${sign} kg`;
+      }
+
+      document.getElementById('kpiSMM').innerText = latest.smm || '-';
+      if (prev && prev.smm && latest.smm) {
+        const diff = (latest.smm - prev.smm).toFixed(1);
+        const sign = diff > 0 ? `+${diff}` : `${diff}`;
+        document.getElementById('kpiSMMDiff').innerText = `較上次: ${sign} kg ${diff > 0 ? '🔥' : ''}`;
+      }
+
+      document.getElementById('kpiPBF').innerText = latest.pbf || '-';
+      if (prev && prev.pbf && latest.pbf) {
+        const diff = (latest.pbf - prev.pbf).toFixed(1);
+        const sign = diff > 0 ? `+${diff}` : `${diff}`;
+        document.getElementById('kpiPBFDiff').innerText = `較上次: ${sign} % ${diff < 0 ? '📉' : ''}`;
+      }
+
+      document.getElementById('kpiScore').innerText = latest.score || '-';
+      document.getElementById('kpiVFA').innerText = latest.vfa ? `內臟脂肪：${latest.vfa} cm²` : '-';
+
+      renderBodyCompositionCharts();
+    }
+
+    function renderBodyCompositionCharts() {
+      const labels = bodyWeightHistory.map(b => b.date.slice(5));
+      const weights = bodyWeightHistory.map(b => b.weight);
+      const smms = bodyWeightHistory.map(b => b.smm);
+      const fats = bodyWeightHistory.map(b => b.fat);
+      const pbfs = bodyWeightHistory.map(b => b.pbf);
+      const vfas = bodyWeightHistory.map(b => b.vfa);
+
+      // Chart 1: 體重 + 骨骼肌 + 體脂肪量
+      const ctxMass = document.getElementById('bodyMassChart').getContext('2d');
+      if (bodyMassChartInstance) bodyMassChartInstance.destroy();
+      bodyMassChartInstance = new Chart(ctxMass, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '體重 (kg)',
+              data: weights,
+              borderColor: '#64748b',
+              backgroundColor: 'rgba(100, 116, 139, 0.05)',
+              tension: 0.3,
+              pointRadius: 4,
+              borderWidth: 2
+            },
+            {
+              label: '骨骼肌重 (SMM, kg)',
+              data: smms,
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79, 70, 229, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 5,
+              borderWidth: 2.5
+            },
+            {
+              label: '體脂肪重 (kg)',
+              data: fats,
+              borderColor: '#f43f5e',
+              borderDash: [4, 4],
+              tension: 0.3,
+              pointRadius: 4,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: { grid: { color: '#f1f5f9' }, title: { display: true, text: 'kg' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Chart 2: 體脂率 (%) + 內臟脂肪面積 (cm²) 雙軸圖
+      const ctxFat = document.getElementById('bodyFatChart').getContext('2d');
+      if (bodyFatChartInstance) bodyFatChartInstance.destroy();
+      bodyFatChartInstance = new Chart(ctxFat, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '體脂肪率 (%)',
+              data: pbfs,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 5,
+              yAxisID: 'y'
+            },
+            {
+              label: '內臟脂肪面積 (cm²)',
+              data: vfas,
+              borderColor: '#0d9488',
+              tension: 0.3,
+              pointRadius: 5,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: '體脂率 (%)' },
+              grid: { color: '#f1f5f9' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: { display: true, text: '內臟脂肪 (cm²)' },
+              grid: { drawOnChartArea: false }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // 🏋️ 處理 Log 訓練紀錄
+    // ==========================================
     function processCSVData(csvText, isLive = false) {
       const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
       const rows = parsed.data;
       if (!rows || rows.length === 0) return;
 
-      // 尋找真正包含「日期」或「Date」的標頭列
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
         const rowStr = rows[i].join(',');
@@ -272,7 +620,7 @@
       }
 
       if (headerIdx === -1) {
-        console.error("找不到標頭列 (未找到包含 日期/Date 的列)");
+        console.error("找不到訓練標頭列");
         return;
       }
 
@@ -280,16 +628,13 @@
       const dateCol = headers.findIndex(h => h === '日期' || h === 'Date');
       const exCol = headers.findIndex(h => h === '動作名稱' || h === 'Exercise');
 
-      // 尋找組數 1, 2, 3, 4, 5
       const setCols = [];
       ['1', '2', '3', '4', '5'].forEach(num => {
         const idx = headers.findIndex(h => h === num);
         if (idx !== -1) setCols.push(idx);
       });
       if (setCols.length === 0 && exCol !== -1) {
-        for (let c = exCol + 1; c <= exCol + 5; c++) {
-          setCols.push(c);
-        }
+        for (let c = exCol + 1; c <= exCol + 5; c++) setCols.push(c);
       }
 
       const records = [];
@@ -324,10 +669,10 @@
 
       records.sort((a, b) => new Date(a.date) - new Date(b.date));
       parsedHistory = records;
-      updateUI(isLive);
+      updateWorkoutUI(isLive);
     }
 
-    function updateUI(isLive) {
+    function updateWorkoutUI(isLive) {
       if (parsedHistory.length === 0) return;
 
       const latestDate = parsedHistory[parsedHistory.length - 1].date;
@@ -336,7 +681,7 @@
         : `離線快照預覽中 (最新: ${latestDate})`;
       document.getElementById('tableSub').innerText = `訓練日期：${latestDate}`;
 
-      updateKPICards();
+      updateStrengthKPICards();
       populateExerciseDropdown();
 
       const selectedExercise = document.getElementById('exerciseSelect').value || '槓鈴臥推';
@@ -346,7 +691,7 @@
       renderRecentTable(latestDate);
     }
 
-    function updateKPICards() {
+    function updateStrengthKPICards() {
       const getBest = (nameRegex) => {
         let best = { weight: 0, reps: 0, date: '' };
         parsedHistory.filter(r => nameRegex.test(r.exercise)).forEach(r => {
@@ -405,17 +750,103 @@
       }
     }
 
+    // 力量階梯曲線（引體向上使用動態體重）
     function renderProgressionChart(exerciseName) {
       const filtered = parsedHistory.filter(r => r.exercise === exerciseName);
       const labels = filtered.map(r => r.date.slice(5));
-      const dataWeights = filtered.map(r => r.maxWeight);
 
       const ctx = document.getElementById('progressionChart').getContext('2d');
       if (progressionChartInstance) progressionChartInstance.destroy();
 
-      progressionChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
+      const isPullup = exerciseName.includes('引體向上');
+      let chartData, chartOptions;
+
+      if (isPullup) {
+        const netLiftWeights = [];
+        const minAssistWeights = [];
+        const bodyWeights = [];
+
+        filtered.forEach(r => {
+          const bw = getEstimatedBodyWeight(r.date);
+          const minAssist = Math.min(...r.sets.map(s => s.weight));
+          const netLift = Math.round((bw - minAssist) * 10) / 10;
+          bodyWeights.push(bw);
+          minAssistWeights.push(minAssist);
+          netLiftWeights.push(netLift);
+        });
+
+        chartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: '真實背部淨拉力 (當期體重 - 輔助配重, kg)',
+              data: netLiftWeights,
+              borderColor: '#e11d48',
+              backgroundColor: 'rgba(225, 29, 72, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: '#e11d48',
+              yAxisID: 'y'
+            },
+            {
+              label: '機台輔助配重插銷 (越低代表越強, kg)',
+              data: minAssistWeights,
+              borderColor: '#94a3b8',
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0.3,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#94a3b8',
+              yAxisID: 'y1'
+            }
+          ]
+        };
+
+        chartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                afterBody: function(contexts) {
+                  const idx = contexts[0].dataIndex;
+                  const rec = filtered[idx];
+                  return [
+                    `當期體重 (Body_Log): ${bodyWeights[idx]} kg`,
+                    `最低輔助配重: ${minAssistWeights[idx]} kg`,
+                    `實際背部負重: ${netLiftWeights[idx]} kg`,
+                    '組數紀錄: ' + rec.sets.map(s => s.raw).join(' | ')
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: '真實淨拉力 (kg)' },
+              grid: { color: '#f1f5f9' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: { display: true, text: '輔助配重 (kg)' },
+              grid: { drawOnChartArea: false }
+            },
+            x: { grid: { display: false } }
+          }
+        };
+      } else {
+        const dataWeights = filtered.map(r => r.maxWeight);
+        chartData = {
           labels: labels,
           datasets: [{
             label: `${exerciseName} 最高重量 (kg)`,
@@ -428,8 +859,9 @@
             pointHoverRadius: 7,
             pointBackgroundColor: '#4f46e5'
           }]
-        },
-        options: {
+        };
+
+        chartOptions = {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
@@ -447,7 +879,13 @@
             y: { grid: { color: '#f1f5f9' }, title: { display: true, text: 'kg' } },
             x: { grid: { display: false } }
           }
-        }
+        };
+      }
+
+      progressionChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
       });
     }
 
@@ -510,9 +948,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom' }
-          }
+          plugins: { legend: { position: 'bottom' } }
         }
       });
     }
@@ -547,30 +983,37 @@
       renderProgressionChart(e.target.value);
     });
 
+    // ==========================================
+    // 🌐 雙 CSV 抓取與連動主邏輯
+    // ==========================================
     function fetchLatestData() {
       const text = document.getElementById('statusText');
       text.innerText = "連線更新中...";
 
-      if (!SHEET_CSV_URL || SHEET_CSV_URL.includes("placeholder")) {
-        setTimeout(() => {
-          processCSVData(FALLBACK_LOG_CSV, false);
-        }, 300);
-        return;
-      }
+      const weightPromise = (WEIGHT_CSV_URL && !WEIGHT_CSV_URL.includes("placeholder"))
+        ? fetch(WEIGHT_CSV_URL + '&t=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null)
+        : Promise.resolve(null);
 
-      fetch(SHEET_CSV_URL + '&t=' + Date.now())
-        .then(response => {
-          if (!response.ok) throw new Error("HTTP error " + response.status);
-          return response.text();
-        })
-        .then(csv => {
-          processCSVData(csv, true);
-        })
-        .catch(err => {
-          console.warn("連線失敗，自動回退至快照數據：", err);
+      const sheetPromise = (!SHEET_CSV_URL || SHEET_CSV_URL.includes("placeholder"))
+        ? Promise.resolve(null)
+        : fetch(SHEET_CSV_URL + '&t=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null);
+
+      Promise.all([weightPromise, sheetPromise]).then(([weightCsv, sheetCsv]) => {
+        if (weightCsv) {
+          processWeightCSV(weightCsv);
+        } else {
+          updateBodyCompositionUI();
+        }
+
+        if (sheetCsv) {
+          processCSVData(sheetCsv, true);
+        } else {
           processCSVData(FALLBACK_LOG_CSV, false);
-          text.innerText = "已回退至離線數據 (請檢查 Google Sheet 發布連結)";
-        });
+          if (SHEET_CSV_URL && !SHEET_CSV_URL.includes("placeholder")) {
+            text.innerText = "已回退至離線數據 (請檢查 Google Sheet 發布連結)";
+          }
+        }
+      });
     }
 
     window.addEventListener('DOMContentLoaded', fetchLatestData);
