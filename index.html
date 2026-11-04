@@ -19,7 +19,7 @@
 
   <div class="max-w-7xl mx-auto space-y-8">
 
-    <!-- Header & Config -->
+    <!-- Header & Sync Status -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl card-shadow border border-slate-100 gap-4">
       <div>
         <div class="flex items-center space-x-3">
@@ -38,7 +38,7 @@
         </button>
         <span id="statusBadge" class="inline-flex items-center justify-center px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-800">
           <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          <span id="statusText">載入中...</span>
+          <span id="statusText">連線中...</span>
         </span>
       </div>
     </header>
@@ -94,24 +94,35 @@
         </div>
       </div>
 
-      <!-- InBody Charts (Dual Column) -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Body Mass Split Chart -->
+      <!-- InBody Charts (體重獨立，肌肉/脂肪獨立，刻度更細膩直觀) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: 體重專屬折線圖 (聚焦 68~82kg) -->
         <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
           <div>
-            <h3 class="text-md font-bold text-slate-900">📊 體重、骨骼肌重與體脂肪重變化 (kg)</h3>
-            <p class="text-xs text-slate-400">客觀驗證身體重組（增肌減脂）成效</p>
+            <h3 class="text-md font-bold text-slate-900">📉 體重變化趨勢 (Weight, kg)</h3>
+            <p class="text-xs text-slate-400">獨立 Y 軸刻度，細微體重浮動一目了然</p>
           </div>
           <div class="relative h-64 w-full">
-            <canvas id="bodyMassChart"></canvas>
+            <canvas id="weightOnlyChart"></canvas>
           </div>
         </div>
 
-        <!-- Fat % & Visceral Fat Dual Axis Chart -->
+        <!-- Chart 2: 骨骼肌重 vs 體脂肪重 (聚焦 15~35kg 同維度比較) -->
         <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
           <div>
-            <h3 class="text-md font-bold text-slate-900">📉 體脂肪率 (%) 與 內臟脂肪面積 (cm²)</h3>
-            <p class="text-xs text-slate-400">雙軸趨勢：左軸為體脂率，右軸為內臟脂肪面積</p>
+            <h3 class="text-md font-bold text-slate-900">⚖️ 骨骼肌重 vs 體脂肪重 (kg)</h3>
+            <p class="text-xs text-slate-400">同量級對比：肌肉上升與脂肪下降的重組軌跡</p>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="muscleFatChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: 體脂率 (%) + 內臟脂肪面積 (cm²) 雙軸圖 -->
+        <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
+          <div>
+            <h3 class="text-md font-bold text-slate-900">🎯 體脂肪率 (%) 與 內臟脂肪 (cm²)</h3>
+            <p class="text-xs text-slate-400">左軸為體脂率，右軸為內臟脂肪面積</p>
           </div>
           <div class="relative h-64 w-full">
             <canvas id="bodyFatChart"></canvas>
@@ -173,7 +184,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 class="text-lg font-bold text-slate-900">📈 動作力量階梯突破曲線</h3>
-            <p class="text-xs text-slate-400">自動抓取最大負重；選擇「輔助引體向上」時全自動連動 Body_Log 計算真實淨拉力</p>
+            <p class="text-xs text-slate-400">自動抓取最大負重；選擇「輔助引體向上」時全自動連動 Body_Log 當期體重計算真實淨拉力</p>
           </div>
           <div class="flex items-center space-x-2 w-full sm:w-auto">
             <label for="exerciseSelect" class="text-xs font-bold text-slate-600 whitespace-nowrap">選擇動作：</label>
@@ -243,80 +254,10 @@
 
   <script>
     // -------------------------------------------------------------
-    // ⚙️ 設定區：請填入你的 Google 試算表「發布到網路」的 CSV 連結
+    // ⚙️ 設定區：已直接填入你的 Google 試算表 CSV 連結
     // -------------------------------------------------------------
-    // 1. 訓練紀錄 Log CSV 連結 (必填)
     let SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1444351328&single=true&output=csv";
-
-    // 2. 體重與身體組成 Body_Log CSV 連結 (填入後全自動連動 InBody 與引體向上)
     let WEIGHT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1338938678&single=true&output=csv";
-
-    // 備用快照數據 (當離線或尚未設定 URL 時使用)
-    const FALLBACK_LOG_CSV = `日期,動作名稱,1,2,3,4,5
-2026-11-03,負重倒掛捲腹,16kg * 10,16kg * 10,16kg * 10,,
-2026-11-03,槓鈴深蹲,30kg * 10,50kg * 10,50kg * 8,60kg * 8,
-2026-11-03,槓鈴RDL,30kg * 10,50kg * 10,50kg * 10,60kg * 9,
-2026-11-03,槓鈴臥推,40kg * 10,40kg * 10,50kg * 8,55kg * 8,
-2026-11-03,啞鈴上胸推,12 kg * 10,15 kg * 10,15 kg * 10,,
-2026-11-03,胸推機,36kg * 10,43kg * 8,43kg * 6,,
-2026-11-03,啞鈴肩推,7.5kg * 10,10kg * 10,10kg * 8,,
-2026-11-03,啞鈴側平舉,7.5kg * 10,7.5kg * 8,7.5kg * 8,,
-2026-11-03,繩索Face pull,41kg * 10,41kg * 10,45kg * 10,,
-2026-11-03,繩索三頭伸展,27kg * 10,32kg * 6,27kg * 10,,
-2026-10-31,負重倒掛捲腹,16kg * 10,16kg * 10,16kg * 10,,
-2026-10-31,輔助引體向上,41kg * 10,32kg * 8,27kg * 8,27kg * 6,
-2026-10-31,繩索坐姿划船,41kg * 10,41kg * 10,41kg * 10,,
-2026-10-31,反向飛鳥機,25kg * 10,32kg * 10,32kg * 10,,
-2026-10-31,繩索三頭伸展,27kg * 10,32kg * 8,32kg * 6,,
-2026-10-31,繩索二頭彎舉,27kg * 10,27kg * 10,27kg * 9,,
-2026-10-27,負重倒掛捲腹,16kg * 10,16kg * 10,16kg * 10,,
-2026-10-27,槓鈴臥推,40kg * 10,40kg * 10,50kg * 8,55kg * 7,
-2026-10-27,啞鈴上胸推,12 kg * 10,15 kg * 10,15 kg * 10,,
-2026-10-27,胸推機,36kg * 10,43kg * 8,43kg * 6,,
-2026-10-27,啞鈴肩推,7.5kg * 10,10kg * 10,10kg * 8,,
-2026-10-27,啞鈴側平舉,7.5kg * 10,5kg * 12,5kg * 12,,
-2026-10-27,繩索Face pull,41kg * 10,41kg * 10,45kg * 10,,
-2026-10-27,繩索三頭伸展,27kg * 10,32kg * 8,32kg * 6,,
-2026-10-25,負重倒掛捲腹,10kg * 10,12kg * 10,16kg * 10,,
-2026-10-25,槓鈴深蹲,30kg * 10,50kg * 10,50kg * 8,60kg * 8,
-2026-10-25,保加利亞分腿蹲,10kg * 10,12kg * 10,12kg * 10,,
-2026-10-25,輔助引體向上,41kg * 10,36kg * 8,32kg * 8,27kg * 5,
-2026-10-25,繩索坐姿划船,41kg * 10,41kg * 10,41kg * 10,,
-2026-10-25,反向飛鳥機,25kg * 10,32kg * 10,32kg * 10,,
-2026-10-25,繩索Face pull,36kg * 10,41kg * 10,45kg * 10,,
-2026-10-25,繩索三頭下壓,36kg * 10,36kg * 10,32kg * 10,,
-2026-10-23,負重倒掛捲腹,12kg * 10,16kg * 10,16kg * 10,,
-2026-10-23,槓鈴臥推,30kg * 10,50kg * 8,50kg * 8,55kg * 6,
-2026-10-23,啞鈴上胸推,12 kg * 10,15 kg * 10,15 kg * 8,,
-2026-10-23,啞鈴肩推,7.5kg * 10,10kg * 8,10kg * 8,,
-2026-10-23,啞鈴側平舉,7.5kg * 8,5kg * 10,5kg * 12,,
-2026-10-23,繩索Face pull,36kg * 10,41kg * 10,45kg * 10,,
-2026-10-23,繩索三頭伸展,27kg * 10,27kg * 10,27kg * 10,,
-2026-10-23,繩索二頭彎舉,27kg * 10,27kg * 10,27kg * 9,,
-2026-10-20,負重倒掛捲腹,12kg * 10,16kg * 10,16kg * 10,,
-2026-10-20,槓鈴RDL,30kg * 10,50kg * 10,50kg * 10,60kg * 8,
-2026-10-20,保加利亞分腿蹲,10kg * 10,12kg * 10,12kg * 10,,
-2026-10-20,輔助引體向上,41kg * 10,32kg * 8,32kg * 8,27kg * 6,
-2026-10-20,繩索坐姿划船,41kg * 10,41kg * 10,45kg * 8,,
-2026-10-20,反向飛鳥機,25kg * 10,32kg * 10,32kg * 10,,
-2026-10-20,繩索Face pull,36kg * 10,41kg * 10,45kg * 10,,
-2026-10-20,繩索二頭彎舉,27kg * 8,23kg * 8,23kg * 8,,
-2026-10-16,槓鈴深蹲,20kg * 10,30kg * 10,40kg * 10,50kg * 10,60kg * 10
-2026-10-14,槓鈴臥推,40kg * 10,40kg * 10,50kg * 8,50kg * 8,
-2026-10-08,槓鈴RDL,30kg * 10,45kg * 10,55kg * 8,60kg * 8,
-2026-09-30,槓鈴深蹲,30kg * 10,50kg * 10,50kg * 8,60kg * 8,
-2026-09-30,槓鈴臥推,30kg * 10,50kg * 8,50kg * 6,50kg * 6,
-2026-09-23,槓鈴深蹲,30kg * 10,40kg * 10,50kg * 8,60kg * 8,
-2026-09-23,槓鈴臥推,30kg * 10,40kg * 10,50kg * 7,50kg * 6,
-2026-09-18,槓鈴RDL,30kg * 10,40kg * 10,50kg * 10,60kg * 8,
-2026-09-15,槓鈴臥推,30kg * 10,40kg * 10,50kg * 8,50kg * 8,
-2026-09-07,槓鈴臥推,30kg * 10,40kg * 10,50kg * 8,50kg * 8,
-2026-09-01,槓鈴臥推,30kg * 10,40kg * 10,50kg * 8,50kg * 8,
-2026-08-19,槓鈴臥推,20kg * 10,30kg * 10,40kg * 10,40kg * 10,
-2026-08-08,槓鈴臥推,20kg * 10,30kg * 10,40kg * 10,40kg * 10,
-2026-07-22,槓鈴臥推,20kg * 10,30kg * 10,40kg * 10,40kg * 10,
-2026-07-15,槓鈴臥推,20kg * 10,30kg * 10,40kg * 10,40kg * 10,
-2026-07-06,槓鈴臥推,20kg * 8,30kg * 8,40kg * 8,40kg * 8,40kg * 8`;
 
     // 內建 InBody 歷史數據快照
     const FALLBACK_BODY_LOG = [
@@ -344,10 +285,10 @@
     let progressionChartInstance = null;
     let volumeChartInstance = null;
     let categoryChartInstance = null;
-    let bodyMassChartInstance = null;
+    let weightOnlyChartInstance = null;
+    let muscleFatChartInstance = null;
     let bodyFatChartInstance = null;
 
-    // 肌群分類
     function getCategory(exName) {
       if (/深蹲|腿|分腿|RDL|臀推|箭步/.test(exName)) return '下肢';
       if (/推|肩|胸|三頭/.test(exName)) return '推力';
@@ -378,7 +319,6 @@
       const rows = parsed.data;
       if (!rows || rows.length === 0) return;
 
-      // 尋找包含「日期」或「Date」的標頭
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
         const rowStr = rows[i].join(',');
@@ -435,7 +375,6 @@
       updateBodyCompositionUI();
     }
 
-    // 依據訓練日期，動態取得最貼合的身體重量 (用於輔助引體向上)
     function getEstimatedBodyWeight(dateStr) {
       if (!bodyWeightHistory || bodyWeightHistory.length === 0) return 77.7;
       const targetTime = new Date(dateStr).getTime();
@@ -457,7 +396,6 @@
       return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
     }
 
-    // 更新 InBody 儀表板 UI (Cards + Charts)
     function updateBodyCompositionUI() {
       if (!bodyWeightHistory || bodyWeightHistory.length === 0) return;
       const latest = bodyWeightHistory[bodyWeightHistory.length - 1];
@@ -499,56 +437,121 @@
       const pbfs = bodyWeightHistory.map(b => b.pbf);
       const vfas = bodyWeightHistory.map(b => b.vfa);
 
-      // Chart 1: 體重 + 骨骼肌 + 體脂肪量
-      const ctxMass = document.getElementById('bodyMassChart').getContext('2d');
-      if (bodyMassChartInstance) bodyMassChartInstance.destroy();
-      bodyMassChartInstance = new Chart(ctxMass, {
+      // -------------------------------------------------------------
+      // Chart 1: 體重專屬折線圖 (獨立 Y 軸，不被其他數值稀釋)
+      // -------------------------------------------------------------
+      const ctxWeight = document.getElementById('weightOnlyChart').getContext('2d');
+      if (weightOnlyChartInstance) weightOnlyChartInstance.destroy();
+      weightOnlyChartInstance = new Chart(ctxWeight, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '體重 (Weight, kg)',
+            data: weights,
+            borderColor: '#334155', // slate-700
+            backgroundColor: 'rgba(51, 65, 85, 0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#334155',
+            borderWidth: 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) { return '體重: ' + ctx.parsed.y + ' kg'; }
+              }
+            }
+          },
+          scales: {
+            y: {
+              grid: { color: '#f1f5f9' },
+              title: { display: true, text: 'kg' },
+              suggestedMin: 70,
+              suggestedMax: 80
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // -------------------------------------------------------------
+      // Chart 2: 骨骼肌重 vs 體脂肪重 (同量級 15~35kg 對比)
+      // -------------------------------------------------------------
+      const ctxMuscleFat = document.getElementById('muscleFatChart').getContext('2d');
+      if (muscleFatChartInstance) muscleFatChartInstance.destroy();
+      muscleFatChartInstance = new Chart(ctxMuscleFat, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [
             {
-              label: '體重 (kg)',
-              data: weights,
-              borderColor: '#64748b',
-              backgroundColor: 'rgba(100, 116, 139, 0.05)',
-              tension: 0.3,
-              pointRadius: 4,
-              borderWidth: 2
-            },
-            {
               label: '骨骼肌重 (SMM, kg)',
               data: smms,
-              borderColor: '#4f46e5',
-              backgroundColor: 'rgba(79, 70, 229, 0.1)',
+              borderColor: '#4f46e5', // Indigo-600
+              backgroundColor: 'rgba(79, 70, 229, 0.08)',
               fill: true,
               tension: 0.3,
               pointRadius: 5,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#4f46e5',
               borderWidth: 2.5
             },
             {
-              label: '體脂肪重 (kg)',
+              label: '體脂肪重 (Fat Mass, kg)',
               data: fats,
-              borderColor: '#f43f5e',
+              borderColor: '#f43f5e', // Rose-500
               borderDash: [4, 4],
+              backgroundColor: 'transparent',
               tension: 0.3,
-              pointRadius: 4,
-              borderWidth: 2
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#f43f5e',
+              borderWidth: 2.5
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                afterBody: function(contexts) {
+                  const idx = contexts[0].dataIndex;
+                  const s = smms[idx];
+                  const f = fats[idx];
+                  if (s && f) {
+                    return ['肌肉/脂肪比: ' + (s / f).toFixed(2)];
+                  }
+                  return [];
+                }
+              }
+            }
+          },
           scales: {
-            y: { grid: { color: '#f1f5f9' }, title: { display: true, text: 'kg' } },
+            y: {
+              grid: { color: '#f1f5f9' },
+              title: { display: true, text: 'kg' },
+              suggestedMin: 15,
+              suggestedMax: 35
+            },
             x: { grid: { display: false } }
           }
         }
       });
 
-      // Chart 2: 體脂率 (%) + 內臟脂肪面積 (cm²) 雙軸圖
+      // -------------------------------------------------------------
+      // Chart 3: 體脂率 (%) + 內臟脂肪面積 (cm²) 雙軸圖
+      // -------------------------------------------------------------
       const ctxFat = document.getElementById('bodyFatChart').getContext('2d');
       if (bodyFatChartInstance) bodyFatChartInstance.destroy();
       bodyFatChartInstance = new Chart(ctxFat, {
@@ -567,7 +570,7 @@
               yAxisID: 'y'
             },
             {
-              label: '內臟脂肪面積 (cm²)',
+              label: '內臟脂肪 (cm²)',
               data: vfas,
               borderColor: '#0d9488',
               tension: 0.3,
@@ -750,7 +753,6 @@
       }
     }
 
-    // 力量階梯曲線（引體向上使用動態體重）
     function renderProgressionChart(exerciseName) {
       const filtered = parsedHistory.filter(r => r.exercise === exerciseName);
       const labels = filtered.map(r => r.date.slice(5));
