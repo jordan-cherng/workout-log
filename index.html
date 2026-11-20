@@ -99,14 +99,19 @@
 
     <!-- SECTION 1: 身體測量與 InBody 數據分析 -->
     <section class="space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div class="flex items-center space-x-2">
           <span class="text-xl">🧬</span>
           <h2 class="text-xl font-bold text-slate-900 tracking-tight">身體組成與 InBody 趨勢分析</h2>
         </div>
-        <span id="inbodyLatestDate" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-          最新測量：-
-        </span>
+        <div class="flex items-center gap-2">
+          <span id="inbodySourceBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 transition">
+            資料來源：載入中...
+          </span>
+          <span id="inbodyLatestDate" class="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+            最新測量：-
+          </span>
+        </div>
       </div>
 
       <!-- InBody KPI Cards -->
@@ -189,9 +194,19 @@
 
     <!-- SECTION 2: 重訓力量與進度分析 -->
     <section class="space-y-4">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">💪</span>
-        <h2 class="text-xl font-bold text-slate-900 tracking-tight">重訓力量與訓練容量監控</h2>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">💪</span>
+          <h2 class="text-xl font-bold text-slate-900 tracking-tight">重訓力量與訓練容量監控</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="workoutSourceBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 transition">
+            資料來源：載入中...
+          </span>
+          <span id="workoutLatestDate" class="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+            最新訓練：-
+          </span>
+        </div>
       </div>
 
       <!-- Top Strength KPI Cards -->
@@ -338,11 +353,29 @@
           </p>
 
           <div class="space-y-2 pt-1">
-            <label class="block font-semibold text-slate-700">訓練紀錄 (Log) CSV 網址：</label>
-            <input id="inputWifeSheetCsv" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=1444351328&output=csv" class="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono">
+            <label class="block font-semibold text-slate-700">快速貼上發布網址（整份文件或任一 CSV 連結）：</label>
+            <div class="flex gap-2">
+              <input id="inputQuickPub" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-.../pub..." class="flex-1 p-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono">
+              <button type="button" onclick="applyQuickPub()" class="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 whitespace-nowrap">套用網址</button>
+            </div>
 
-            <label class="block font-semibold text-slate-700 mt-2">體態紀錄 (Body_Log) CSV 網址：</label>
-            <input id="inputWifeWeightCsv" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=1338938678&output=csv" class="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+              <div>
+                <label class="block font-medium text-slate-600 text-[11px]">訓練紀錄 (Log) CSV：</label>
+                <input id="inputWifeSheetCsv" type="text" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-[11px] font-mono">
+              </div>
+              <div>
+                <label class="block font-medium text-slate-600 text-[11px]">體態紀錄 (Body_Log) CSV：</label>
+                <input id="inputWifeWeightCsv" type="text" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-[11px] font-mono">
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button type="button" id="btnTestConn" onclick="testLiveConnection()" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 hover:bg-rose-200 transition">
+                🔍 立即測試這組網址連線
+              </button>
+              <div id="testResultMsg" class="mt-2 hidden text-xs p-2.5 rounded-lg"></div>
+            </div>
           </div>
 
           <div class="bg-white p-3 rounded-lg border border-rose-100 text-[11px] text-slate-500 space-y-1">
@@ -856,6 +889,65 @@
     // -------------------------------------------------------------
     // ⚙️ 設定彈窗邏輯
     // -------------------------------------------------------------
+    
+    function applyQuickPub() {
+      const val = document.getElementById('inputQuickPub').value.trim();
+      if (!val) return;
+      const matchKey = val.match(/2PACX-[a-zA-Z0-9_\-]+/);
+      if (matchKey) {
+        const key = matchKey[0];
+        document.getElementById('inputWifeSheetCsv').value = `https://docs.google.com/spreadsheets/d/e/${key}/pub?gid=1444351328&single=true&output=csv`;
+        document.getElementById('inputWifeWeightCsv').value = `https://docs.google.com/spreadsheets/d/e/${key}/pub?gid=1338938678&single=true&output=csv`;
+        const resBox = document.getElementById('testResultMsg');
+        resBox.className = "mt-2 text-xs p-2.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200";
+        resBox.innerText = "已成功自動辨識發布金鑰，已自動填入 Log 與 Body_Log 網址！請點擊下方的「🔍 立即測試連線」驗證。";
+        resBox.classList.remove('hidden');
+      } else {
+        alert("未能辨識出 2PACX- 發布金鑰，請確認複製的是「發布到網路」產生的網址！");
+      }
+    }
+
+    async function testLiveConnection() {
+      const resBox = document.getElementById('testResultMsg');
+      const btn = document.getElementById('btnTestConn');
+      resBox.className = "mt-2 text-xs p-2.5 rounded-lg bg-slate-100 text-slate-700";
+      resBox.innerText = "正在連線測試 Google 試算表...";
+      resBox.classList.remove('hidden');
+      btn.disabled = true;
+
+      const sheetUrl = document.getElementById('inputWifeSheetCsv').value.trim();
+      const weightUrl = document.getElementById('inputWifeWeightCsv').value.trim();
+
+      try {
+        const t = Date.now();
+        const weightRes = weightUrl ? await fetch(weightUrl + (weightUrl.includes('?') ? '&' : '?') + 't=' + t).catch(() => null) : null;
+        const sheetRes = sheetUrl ? await fetch(sheetUrl + (sheetUrl.includes('?') ? '&' : '?') + 't=' + t).catch(() => null) : null;
+
+        let weightText = weightRes && weightRes.ok ? await weightRes.text() : null;
+        let sheetText = sheetRes && sheetRes.ok ? await sheetRes.text() : null;
+
+        const isWeightOk = weightText && (weightText.includes('體重') || weightText.includes('Weight'));
+        const isSheetOk = sheetText && (sheetText.includes('動作') || sheetText.includes('Exercise') || sheetText.includes('日期'));
+
+        if (isWeightOk || isSheetOk) {
+          resBox.className = "mt-2 text-xs p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-medium";
+          resBox.innerHTML = `✅ <b>連線測試成功！</b><br>
+            • 體態紀錄 (Body_Log)：${isWeightOk ? '讀取成功 (回應正常 CSV)' : '尚未取得或未發布'}<br>
+            • 訓練紀錄 (Log)：${isSheetOk ? '讀取成功 (回應正常 CSV)' : '尚未取得或未發布'}<br>
+            點選下方「儲存並重新整理」即可正式套用！`;
+        } else {
+          resBox.className = "mt-2 text-xs p-2.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-300";
+          resBox.innerHTML = `❌ <b>連線尚未成功</b>：Google 回應尚未發布或權限不足。<br>
+            請確認已在「小禹重訓紀錄」試算表點選 <b>檔案 > 共用 > 發布到網路</b> 並點擊「發布」。`;
+        }
+      } catch (err) {
+        resBox.className = "mt-2 text-xs p-2.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-300";
+        resBox.innerText = "❌ 連線測試發生錯誤：" + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     function openSettingsModal() {
       document.getElementById('inputWifeSheetCsv').value = PROFILES.yu.sheetCsvUrl;
       document.getElementById('inputWifeWeightCsv').value = PROFILES.yu.weightCsvUrl;
@@ -928,9 +1020,13 @@
     // ==========================================
     // 🧬 處理 Body_Log 體重與身體組成數據
     // ==========================================
-    function processWeightCSV(csvText) {
+    let isWeightLive = false;
+    let isWorkoutLive = false;
+
+    function processWeightCSV(csvText, isLive = false) {
+      isWeightLive = isLive;
       if (!csvText) {
-        updateBodyCompositionUI();
+        updateBodyCompositionUI(isLive);
         return;
       }
       const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
@@ -1023,7 +1119,18 @@
       return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
     }
 
-    function updateBodyCompositionUI() {
+    function updateBodyCompositionUI(isLive = isWeightLive) {
+      const sourceBadge = document.getElementById('inbodySourceBadge');
+      if (sourceBadge) {
+        if (isLive) {
+          sourceBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+          sourceBadge.innerText = "🟢 來自 Google 試算表即時連動";
+        } else {
+          sourceBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200";
+          sourceBadge.innerText = "📁 本機快照數據";
+        }
+      }
+
       if (!bodyWeightHistory || bodyWeightHistory.length === 0) {
         document.getElementById('inbodyLatestDate').innerText = `最新測量：尚無資料`;
         document.getElementById('kpiBodyWeight').innerText = '-';
@@ -1388,10 +1495,24 @@
 
       if (banner) banner.classList.add('hidden');
 
+      isWorkoutLive = isLive;
       const latestDate = parsedHistory[parsedHistory.length - 1].date;
-      document.getElementById('statusText').innerText = isLive 
-        ? `雲端即時連動中 (最新: ${latestDate})` 
-        : `離線數據預覽中 (最新: ${latestDate})`;
+
+      const workoutBadge = document.getElementById('workoutSourceBadge');
+      const workoutLatestEl = document.getElementById('workoutLatestDate');
+      if (workoutBadge) {
+        if (isLive) {
+          workoutBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+          workoutBadge.innerText = "🟢 來自 Google 試算表即時連動";
+        } else {
+          workoutBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200";
+          workoutBadge.innerText = "📁 範例快照數據";
+        }
+      }
+      if (workoutLatestEl) {
+        workoutLatestEl.innerText = `最新訓練：${latestDate}`;
+      }
+
       document.getElementById('tableSub').innerText = `訓練日期：${latestDate}`;
 
       updateStrengthKPICards();
@@ -1775,23 +1896,33 @@
           return;
         }
 
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+
         if (weightCsv) {
-          processWeightCSV(weightCsv);
+          processWeightCSV(weightCsv, true);
         } else {
-          updateBodyCompositionUI();
+          updateBodyCompositionUI(false);
         }
 
         if (sheetCsv) {
           processCSVData(sheetCsv, true);
         } else {
-          // 若線上抓取失敗或未發布，維持現有快照，絕不清空數據
           if (profile.fallbackLogCsv && parsedHistory.length === 0) {
             processCSVData(profile.fallbackLogCsv, false);
           }
-          if (parsedHistory.length > 0) {
-            text.innerText = "已連線 (最新數據已同步)";
-          } else {
-            processCSVData(null, false);
+        }
+
+        const statusBadge = document.getElementById('statusBadge');
+        if (weightCsv || sheetCsv) {
+          text.innerText = `已連線同步 (${timeStr})`;
+          if (statusBadge) {
+            statusBadge.className = "inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-100 text-emerald-800 whitespace-nowrap border border-emerald-300";
+          }
+        } else {
+          text.innerText = `本機離線快照中`;
+          if (statusBadge) {
+            statusBadge.className = "inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800 whitespace-nowrap border border-amber-300";
           }
         }
       });
