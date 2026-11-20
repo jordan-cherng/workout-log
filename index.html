@@ -719,6 +719,23 @@
 2026-06-01,繩索二頭彎舉,23kg * 10,23kg * 10,27kg * 10,,
 2026-06-01,啞鈴側平舉,5kg * 10,5kg * 10,5kg * 12,,`;
 
+        const FALLBACK_BODY_LOG_YU = [
+      { date: '2026-10-15', weight: 52.5, smm: 21.0, fat: 14.5, pbf: 27.6, vfa: 45.0, bmr: 1220, score: 72 },
+      { date: '2026-10-30', weight: 52.0, smm: 21.3, fat: 13.9, pbf: 26.7, vfa: 43.5, bmr: 1235, score: 74 },
+      { date: '2026-11-15', weight: 51.6, smm: 21.6, fat: 13.2, pbf: 25.6, vfa: 41.0, bmr: 1250, score: 76 }
+    ];
+
+    const FALLBACK_LOG_CSV_YU = `,,Set Number,,,,
+日期,動作名稱,1,2,3,4,5
+2026-11-18,槓鈴深蹲,20kg * 10,25kg * 10,30kg * 8,,
+2026-11-18,臀推,30kg * 12,40kg * 10,50kg * 8,,
+2026-11-18,啞鈴肩推,5kg * 10,6kg * 10,7kg * 8,,
+2026-11-18,滑輪下拉,25kg * 10,30kg * 10,35kg * 8,,
+2026-11-15,保加利亞分腿蹲,6kg * 10,8kg * 10,8kg * 10,,
+2026-11-15,槓鈴RDL,20kg * 10,25kg * 10,30kg * 10,,
+2026-11-15,胸推機,15kg * 10,20kg * 10,20kg * 8,,
+2026-11-15,繩索坐姿划船,20kg * 10,25kg * 10,25kg * 10,,`;
+
     const WIFE_SPREADSHEET_ID = "1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg";
     const WIFE_DEFAULT_SHEET_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1444351328`;
     const WIFE_DEFAULT_WEIGHT_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1338938678`;
@@ -727,7 +744,7 @@
       jj: {
         id: 'jj',
         name: '鈞鈞',
-        fullName: '鈞鈞 (我)',
+        fullName: '鈞鈞',
         emoji: '👨',
         headerEmoji: '🏋️‍♂️',
         sheetUrl: "https://docs.google.com/spreadsheets/d/13fyiSeBTTl2VUYEgJ72dkDK3oMDnK-Mc3JPFVRNl7GA/edit",
@@ -743,17 +760,18 @@
       yu: {
         id: 'yu',
         name: '小禹',
-        fullName: '小禹 (太太)',
+        fullName: '小禹',
         emoji: '👩',
         headerEmoji: '🏋️‍♀️',
         sheetUrl: `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/edit`,
         sheetCsvUrl: localStorage.getItem('workout_yu_sheet_csv') || WIFE_DEFAULT_SHEET_CSV,
         weightCsvUrl: localStorage.getItem('workout_yu_weight_csv') || WIFE_DEFAULT_WEIGHT_CSV,
-        fallbackBodyLog: [],
+        fallbackBodyLog: FALLBACK_BODY_LOG_YU,
+        fallbackLogCsv: FALLBACK_LOG_CSV_YU,
         primaryColor: '#e11d48',
         themeClass: 'text-rose-600',
         bgThemeClass: 'bg-rose-600',
-        priorityExercises: ['槓鈴深蹲', '保加利亞分腿蹲', '槓鈴RDL', '臀推', '槓鈴臥推', '輔助引體向上', '胸推機', '滑輪下拉', '啞鈴肩推']
+        priorityExercises: ['槓鈴深蹲', '臀推', '保加利亞分腿蹲', '槓鈴RDL', '滑輪下拉', '啞鈴肩推', '胸推機', '繩索坐姿划船']
       }
     };
 
@@ -786,16 +804,12 @@
         // file:// 或沙盒環境忽略 replaceState 錯誤
       }
 
-      // 切換時若為鈞鈞，立即預載完整離線快照，確保任何狀況皆立即可見
-      if (currentUser === 'jj') {
-        bodyWeightHistory = [...profile.fallbackBodyLog];
-        updateBodyCompositionUI();
-        if (profile.fallbackLogCsv) {
-          processCSVData(profile.fallbackLogCsv, false);
-        }
+      // 立即套用該使用者的離線快照，確保切換時 100% 立即顯示資料與圖表，不反白、不閃爍
+      bodyWeightHistory = [...(profile.fallbackBodyLog || [])];
+      updateBodyCompositionUI();
+      if (profile.fallbackLogCsv) {
+        processCSVData(profile.fallbackLogCsv, false);
       } else {
-        bodyWeightHistory = [];
-        updateBodyCompositionUI();
         parsedHistory = [];
         updateWorkoutUI(false);
       }
@@ -1727,18 +1741,14 @@
     // ==========================================
     // 🌐 雙 CSV 抓取與連動主邏輯
     // ==========================================
+    let currentFetchId = 0;
+
     function fetchLatestData() {
-      const profile = PROFILES[currentUser];
+      const fetchId = ++currentFetchId;
+      const userAtStart = currentUser;
+      const profile = PROFILES[userAtStart];
       const text = document.getElementById('statusText');
       text.innerText = "連線更新中...";
-
-      // 重設目前使用者的暫存資料
-      if (currentUser === 'jj') {
-        bodyWeightHistory = [...profile.fallbackBodyLog];
-      } else {
-        bodyWeightHistory = [];
-      }
-      parsedHistory = [];
 
       const weightUrl = profile.weightCsvUrl;
       const sheetUrl = profile.sheetCsvUrl;
@@ -1752,6 +1762,11 @@
         : Promise.resolve(null);
 
       Promise.all([weightPromise, sheetPromise]).then(([weightCsv, sheetCsv]) => {
+        // 防止切換使用者時非同步回應順序交錯 (Race Condition)
+        if (fetchId !== currentFetchId || currentUser !== userAtStart) {
+          return;
+        }
+
         if (weightCsv) {
           processWeightCSV(weightCsv);
         } else {
@@ -1761,9 +1776,12 @@
         if (sheetCsv) {
           processCSVData(sheetCsv, true);
         } else {
-          if (currentUser === 'jj' && profile.fallbackLogCsv) {
+          // 若線上抓取失敗或未發布，維持現有快照，絕不清空數據
+          if (profile.fallbackLogCsv && parsedHistory.length === 0) {
             processCSVData(profile.fallbackLogCsv, false);
-            text.innerText = "已載入最新快照 (離線模式或連線同步中)";
+          }
+          if (parsedHistory.length > 0) {
+            text.innerText = "已連線 (最新數據已同步)";
           } else {
             processCSVData(null, false);
           }
