@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>重訓進度與身體組成即時分析儀表板</title>
+  <title id="pageTitle">重訓進度與身體組成即時分析儀表板</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js -->
@@ -13,35 +13,89 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
+    .transition-all-custom { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased p-4 md:p-8">
 
   <div class="max-w-7xl mx-auto space-y-8">
 
-    <!-- Header & Sync Status -->
-    <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl card-shadow border border-slate-100 gap-4">
+    <!-- Header & User Switcher -->
+    <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-6 rounded-2xl card-shadow border border-slate-100 gap-5">
       <div>
         <div class="flex items-center space-x-3">
-          <span class="text-3xl">🏋️</span>
-          <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">重訓進度與身體組成即時監控</h1>
+          <span class="text-3xl" id="headerEmoji">🏋️</span>
+          <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight" id="headerTitle">重訓進度與身體組成即時監控</h1>
+            <p class="text-sm text-slate-500 mt-1" id="headerSubtitle">
+              目前檢視：<span id="currentUserName" class="font-bold text-indigo-600">鈞鈞</span> 的訓練與體態記錄
+            </p>
+          </div>
         </div>
-        <p class="text-sm text-slate-500 mt-1">連動 Google Sheets（Log 訓練 + Body_Log 體態），全自動同步與數據分析</p>
+        <div class="flex items-center gap-3 mt-3 text-xs text-slate-400">
+          <a id="sheetLink" href="https://docs.google.com/spreadsheets/d/13fyiSeBTTl2VUYEgJ72dkDK3oMDnK-Mc3JPFVRNl7GA/edit" target="_blank" class="inline-flex items-center font-medium text-slate-500 hover:text-indigo-600 hover:underline">
+            <svg class="w-3.5 h-3.5 mr-1 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z"/></svg>
+            <span id="sheetLinkText">開啟 鈞鈞 的 Google 試算表</span>
+            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          </a>
+          <span>•</span>
+          <button onclick="openSettingsModal()" class="inline-flex items-center text-slate-500 hover:text-slate-800 hover:underline">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            連動網址設定
+          </button>
+        </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-        <button id="refreshBtn" onclick="fetchLatestData()" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm">
-          <svg id="syncIcon" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          重新整理資料
-        </button>
-        <span id="statusBadge" class="inline-flex items-center justify-center px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-800">
-          <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          <span id="statusText">連線中...</span>
-        </span>
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+        <!-- 人物切換器 Switcher -->
+        <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner">
+          <button id="btnUserJj" onclick="switchUser('jj')" class="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all-custom shadow-sm bg-white text-indigo-700">
+            <span class="mr-1.5">👨</span>
+            <span>鈞鈞 (我)</span>
+          </button>
+          <button id="btnUserYu" onclick="switchUser('yu')" class="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-all-custom text-slate-500 hover:text-slate-800">
+            <span class="mr-1.5">👩</span>
+            <span>小禹 (太太)</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="refreshBtn" onclick="fetchLatestData()" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm">
+            <svg id="syncIcon" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重新整理
+          </button>
+          <span id="statusBadge" class="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-800 whitespace-nowrap">
+            <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span id="statusText">連線中...</span>
+          </span>
+        </div>
       </div>
     </header>
+
+    <!-- 小禹 專屬導引通知 Banner (在尚未填寫資料或連線異常時提示) -->
+    <div id="wifeNoticeBanner" class="hidden bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 p-5 rounded-2xl card-shadow">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">✨</span>
+            <h3 class="text-base font-bold text-rose-900">小禹的專屬重訓試算表已就緒！</h3>
+          </div>
+          <p class="text-xs text-rose-700 leading-relaxed">
+            已成功建立獨立試算表「小禹重訓紀錄」。點擊右方按鈕開啟試算表開始記錄，並請至「檔案 > 共用 > 發布到網路」完成發布，網頁即可全自動同步視覺化圖表！
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <a href="https://docs.google.com/spreadsheets/d/1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg/edit" target="_blank" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+            開啟小禹重訓紀錄 ↗
+          </a>
+          <button onclick="openSettingsModal()" class="px-3 py-2 bg-white hover:bg-rose-100 border border-rose-200 text-rose-800 text-xs font-semibold rounded-xl transition">
+            設定發布網址
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- SECTION 1: 身體測量與 InBody 數據分析 -->
     <section class="space-y-4">
@@ -94,20 +148,20 @@
         </div>
       </div>
 
-      <!-- InBody Charts (體重獨立，肌肉/脂肪獨立，刻度更細膩直觀) -->
+      <!-- InBody Charts (自適應 Y 軸刻度) -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Chart 1: 體重專屬折線圖 (聚焦 68~82kg) -->
+        <!-- Chart 1: 體重專屬折線圖 -->
         <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
           <div>
             <h3 class="text-md font-bold text-slate-900">📉 體重變化趨勢 (Weight, kg)</h3>
-            <p class="text-xs text-slate-400">獨立 Y 軸刻度，細微體重浮動一目了然</p>
+            <p class="text-xs text-slate-400">獨立 Y 軸動態範圍，細微體重浮動一目了然</p>
           </div>
           <div class="relative h-64 w-full">
             <canvas id="weightOnlyChart"></canvas>
           </div>
         </div>
 
-        <!-- Chart 2: 骨骼肌重 vs 體脂肪重 (聚焦 15~35kg 同維度比較) -->
+        <!-- Chart 2: 骨骼肌重 vs 體脂肪重 -->
         <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 space-y-3">
           <div>
             <h3 class="text-md font-bold text-slate-900">⚖️ 骨骼肌重 vs 體脂肪重 (kg)</h3>
@@ -143,7 +197,7 @@
       <!-- Top Strength KPI Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴深蹲 巔峰</p>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpiSquatTitle">深蹲 / 下肢 巔峰</p>
           <div class="flex items-baseline space-x-1.5 mt-2">
             <span id="kpiSquat" class="text-3xl font-black text-indigo-600">-</span>
             <span class="text-sm font-medium text-slate-500">kg</span>
@@ -152,7 +206,7 @@
         </div>
 
         <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴臥推 巔峰</p>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpiBenchTitle">臥推 / 上肢推 巔峰</p>
           <div class="flex items-baseline space-x-1.5 mt-2">
             <span id="kpiBench" class="text-3xl font-black text-indigo-600">-</span>
             <span class="text-sm font-medium text-slate-500">kg</span>
@@ -161,7 +215,7 @@
         </div>
 
         <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">槓鈴 RDL 巔峰</p>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpiRDLTitle">RDL / 硬舉 巔峰</p>
           <div class="flex items-baseline space-x-1.5 mt-2">
             <span id="kpiRDL" class="text-3xl font-black text-indigo-600">-</span>
             <span class="text-sm font-medium text-slate-500">kg</span>
@@ -170,7 +224,7 @@
         </div>
 
         <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">負重倒掛捲腹 負重</p>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpiCoreTitle">核心 / 捲腹 巔峰</p>
           <div class="flex items-baseline space-x-1.5 mt-2">
             <span id="kpiCore" class="text-3xl font-black text-indigo-600">-</span>
             <span class="text-sm font-medium text-slate-500">kg</span>
@@ -184,7 +238,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 class="text-lg font-bold text-slate-900">📈 動作力量階梯突破曲線</h3>
-            <p class="text-xs text-slate-400">自動抓取最大負重；選擇「輔助引體向上」時全自動連動 Body_Log 當期體重計算真實淨拉力</p>
+            <p class="text-xs text-slate-400">自動抓取每次訓練各動作之最高有效負重；引體向上連動體重計算真實拉力</p>
           </div>
           <div class="flex items-center space-x-2 w-full sm:w-auto">
             <label for="exerciseSelect" class="text-xs font-bold text-slate-600 whitespace-nowrap">選擇動作：</label>
@@ -193,7 +247,7 @@
             </select>
           </div>
         </div>
-        <div class="relative h-72 md:h-80 w-full">
+        <div class="relative h-72 md:h-80 w-full" id="progressionChartContainer">
           <canvas id="progressionChart"></canvas>
         </div>
       </div>
@@ -252,15 +306,69 @@
 
   </div>
 
+  <!-- Settings Modal (連動設定彈窗) -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">⚙️</span>
+          <h3 class="text-lg font-bold text-slate-900">Google 試算表連動設定</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-600">
+        <!-- 鈞鈞 的設定 -->
+        <div class="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-200">
+          <div class="flex items-center justify-between font-bold text-slate-800 text-sm">
+            <span>👨 鈞鈞 (我) 的試算表</span>
+            <a href="https://docs.google.com/spreadsheets/d/13fyiSeBTTl2VUYEgJ72dkDK3oMDnK-Mc3JPFVRNl7GA/edit" target="_blank" class="text-xs text-indigo-600 hover:underline">開啟檔案 ↗</a>
+          </div>
+          <p class="text-slate-400">已直接連動至發布連結，運作正常。</p>
+        </div>
+
+        <!-- 小禹 的設定 -->
+        <div class="p-4 bg-rose-50/60 rounded-xl space-y-3 border border-rose-200">
+          <div class="flex items-center justify-between font-bold text-rose-950 text-sm">
+            <span>👩 小禹 (太太) 的試算表</span>
+            <a href="https://docs.google.com/spreadsheets/d/1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg/edit" target="_blank" class="text-xs font-bold text-rose-600 hover:underline">開啟小禹重訓紀錄 ↗</a>
+          </div>
+          <p class="text-rose-700">
+            檔案 ID：<code class="bg-white px-1.5 py-0.5 rounded border border-rose-200 text-rose-900">1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg</code>
+          </p>
+
+          <div class="space-y-2 pt-1">
+            <label class="block font-semibold text-slate-700">訓練紀錄 (Log) CSV 網址：</label>
+            <input id="inputWifeSheetCsv" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=1444351328&output=csv" class="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono">
+
+            <label class="block font-semibold text-slate-700 mt-2">體態紀錄 (Body_Log) CSV 網址：</label>
+            <input id="inputWifeWeightCsv" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=1338938678&output=csv" class="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono">
+          </div>
+
+          <div class="bg-white p-3 rounded-lg border border-rose-100 text-[11px] text-slate-500 space-y-1">
+            <p class="font-semibold text-rose-800">💡 快速取得 CSV 網址教學：</p>
+            <ol class="list-decimal pl-4 space-y-0.5">
+              <li>開啟「小禹重訓紀錄」試算表</li>
+              <li>點擊頂部選單 <strong>檔案</strong> > <strong>共用</strong> > <strong>發布到網路</strong></li>
+              <li>將整份文件或分頁選擇 <strong>逗號分隔值 (.csv)</strong> 並發布</li>
+              <li>將產生的網址貼回上方儲存即可</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="resetWifeUrls()" class="px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-800">還原預設</button>
+        <button onclick="saveSettings()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow">儲存並重新整理</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // -------------------------------------------------------------
-    // ⚙️ 設定區：已直接填入你的 Google 試算表 CSV 連結
+    // ⚙️ 使用者 Profile 設定區
     // -------------------------------------------------------------
-    let SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1444351328&single=true&output=csv";
-    let WEIGHT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1338938678&single=true&output=csv";
-
-    // 內建 InBody 歷史數據快照
-    const FALLBACK_BODY_LOG = [
+    const FALLBACK_BODY_LOG_JJ = [
       { date: '2026-03-27', weight: 78.4, smm: 30.4, fat: null, pbf: 30.5, vfa: null, bmr: null, score: null },
       { date: '2026-04-05', weight: 78.5, smm: 30.6, fat: null, pbf: 29.8, vfa: null, bmr: null, score: null },
       { date: '2026-04-10', weight: 77.0, smm: 30.3, fat: null, pbf: 29.3, vfa: null, bmr: null, score: null },
@@ -278,7 +386,45 @@
       { date: '2026-10-30', weight: 77.7, smm: 31.9, fat: 20.7, pbf: 26.6, vfa: 85.9, bmr: 1602, score: 69 }
     ];
 
-    let bodyWeightHistory = [...FALLBACK_BODY_LOG];
+    const WIFE_SPREADSHEET_ID = "1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg";
+    const WIFE_DEFAULT_SHEET_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1444351328`;
+    const WIFE_DEFAULT_WEIGHT_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1338938678`;
+
+    const PROFILES = {
+      jj: {
+        id: 'jj',
+        name: '鈞鈞',
+        fullName: '鈞鈞 (我)',
+        emoji: '👨',
+        headerEmoji: '🏋️‍♂️',
+        sheetUrl: "https://docs.google.com/spreadsheets/d/13fyiSeBTTl2VUYEgJ72dkDK3oMDnK-Mc3JPFVRNl7GA/edit",
+        sheetCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1444351328&single=true&output=csv",
+        weightCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7dvONm8lv_RYHSJkWsKkTJpk16ee3iOm1rG98rNjJ1UAgg1iTgHc4c3VY5Crt-Sv-GipJG-oOeFbI/pub?gid=1338938678&single=true&output=csv",
+        fallbackBodyLog: FALLBACK_BODY_LOG_JJ,
+        primaryColor: '#4f46e5',
+        themeClass: 'text-indigo-600',
+        bgThemeClass: 'bg-indigo-600',
+        priorityExercises: ['槓鈴臥推', '槓鈴深蹲', '槓鈴RDL', '保加利亞分腿蹲', '輔助引體向上', '負重倒掛捲腹', '胸推機', '繩索Face pull']
+      },
+      yu: {
+        id: 'yu',
+        name: '小禹',
+        fullName: '小禹 (太太)',
+        emoji: '👩',
+        headerEmoji: '🏋️‍♀️',
+        sheetUrl: `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/edit`,
+        sheetCsvUrl: localStorage.getItem('workout_yu_sheet_csv') || WIFE_DEFAULT_SHEET_CSV,
+        weightCsvUrl: localStorage.getItem('workout_yu_weight_csv') || WIFE_DEFAULT_WEIGHT_CSV,
+        fallbackBodyLog: [],
+        primaryColor: '#e11d48',
+        themeClass: 'text-rose-600',
+        bgThemeClass: 'bg-rose-600',
+        priorityExercises: ['槓鈴深蹲', '保加利亞分腿蹲', '槓鈴RDL', '臀推', '槓鈴臥推', '輔助引體向上', '胸推機', '滑輪下拉', '啞鈴肩推']
+      }
+    };
+
+    let currentUser = 'jj';
+    let bodyWeightHistory = [];
     let parsedHistory = [];
 
     // Chart instances
@@ -289,8 +435,102 @@
     let muscleFatChartInstance = null;
     let bodyFatChartInstance = null;
 
+    // -------------------------------------------------------------
+    // 👤 人物切換核心邏輯
+    // -------------------------------------------------------------
+    function switchUser(userId, skipFetch = false) {
+      if (!PROFILES[userId]) userId = 'jj';
+      currentUser = userId;
+      const profile = PROFILES[currentUser];
+
+      // 更新網址 Query Param (例如 ?user=yu)，太太可直接加到手機書籤
+      const url = new URL(window.location);
+      url.searchParams.set('user', currentUser);
+      window.history.replaceState(null, '', url);
+
+      // 更新按鈕外觀
+      const btnJj = document.getElementById('btnUserJj');
+      const btnYu = document.getElementById('btnUserYu');
+      const nameEl = document.getElementById('currentUserName');
+      const headerEmojiEl = document.getElementById('headerEmoji');
+      const pageTitleEl = document.getElementById('pageTitle');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const sheetLink = document.getElementById('sheetLink');
+      const sheetLinkText = document.getElementById('sheetLinkText');
+      const noticeBanner = document.getElementById('wifeNoticeBanner');
+
+      if (currentUser === 'jj') {
+        btnJj.className = "flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all-custom shadow-sm bg-white text-indigo-700";
+        btnYu.className = "flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-all-custom text-slate-500 hover:text-slate-800";
+        nameEl.innerText = "鈞鈞";
+        nameEl.className = "font-bold text-indigo-600";
+        headerEmojiEl.innerText = "🏋️‍♂️";
+        pageTitleEl.innerText = "鈞鈞的重訓進度與身體組成監控";
+        refreshBtn.className = "inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm";
+        sheetLink.href = profile.sheetUrl;
+        sheetLinkText.innerText = "開啟 鈞鈞 的 Google 試算表";
+        if (noticeBanner) noticeBanner.classList.add('hidden');
+      } else {
+        btnYu.className = "flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all-custom shadow-sm bg-white text-rose-600";
+        btnJj.className = "flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-all-custom text-slate-500 hover:text-slate-800";
+        nameEl.innerText = "小禹";
+        nameEl.className = "font-bold text-rose-600";
+        headerEmojiEl.innerText = "🏋️‍♀️";
+        pageTitleEl.innerText = "小禹的重訓進度與身體組成監控";
+        refreshBtn.className = "inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700 transition shadow-sm";
+        sheetLink.href = profile.sheetUrl;
+        sheetLinkText.innerText = "開啟 小禹 的 Google 試算表";
+      }
+
+      if (!skipFetch) {
+        fetchLatestData();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // ⚙️ 設定彈窗邏輯
+    // -------------------------------------------------------------
+    function openSettingsModal() {
+      document.getElementById('inputWifeSheetCsv').value = PROFILES.yu.sheetCsvUrl;
+      document.getElementById('inputWifeWeightCsv').value = PROFILES.yu.weightCsvUrl;
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function saveSettings() {
+      const sheetUrl = document.getElementById('inputWifeSheetCsv').value.trim();
+      const weightUrl = document.getElementById('inputWifeWeightCsv').value.trim();
+
+      if (sheetUrl) {
+        PROFILES.yu.sheetCsvUrl = sheetUrl;
+        localStorage.setItem('workout_yu_sheet_csv', sheetUrl);
+      }
+      if (weightUrl) {
+        PROFILES.yu.weightCsvUrl = weightUrl;
+        localStorage.setItem('workout_yu_weight_csv', weightUrl);
+      }
+
+      closeSettingsModal();
+      fetchLatestData();
+    }
+
+    function resetWifeUrls() {
+      document.getElementById('inputWifeSheetCsv').value = WIFE_DEFAULT_SHEET_CSV;
+      document.getElementById('inputWifeWeightCsv').value = WIFE_DEFAULT_WEIGHT_CSV;
+      localStorage.removeItem('workout_yu_sheet_csv');
+      localStorage.removeItem('workout_yu_weight_csv');
+      PROFILES.yu.sheetCsvUrl = WIFE_DEFAULT_SHEET_CSV;
+      PROFILES.yu.weightCsvUrl = WIFE_DEFAULT_WEIGHT_CSV;
+    }
+
+    // -------------------------------------------------------------
+    // 動作分類與組數解析
+    // -------------------------------------------------------------
     function getCategory(exName) {
-      if (/深蹲|腿|分腿|RDL|臀推|箭步/.test(exName)) return '下肢';
+      if (/深蹲|腿|分腿|RDL|臀推|箭步|硬舉/.test(exName)) return '下肢';
       if (/推|肩|胸|三頭/.test(exName)) return '推力';
       if (/划船|拉|引體|二頭|飛鳥|Face/.test(exName)) return '拉力';
       if (/捲腹|棒式|核心/.test(exName)) return '核心';
@@ -315,9 +555,16 @@
     // 🧬 處理 Body_Log 體重與身體組成數據
     // ==========================================
     function processWeightCSV(csvText) {
+      if (!csvText) {
+        updateBodyCompositionUI();
+        return;
+      }
       const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
       const rows = parsed.data;
-      if (!rows || rows.length === 0) return;
+      if (!rows || rows.length === 0) {
+        updateBodyCompositionUI();
+        return;
+      }
 
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
@@ -328,7 +575,10 @@
         }
       }
 
-      if (headerIdx === -1) return;
+      if (headerIdx === -1) {
+        updateBodyCompositionUI();
+        return;
+      }
 
       const headers = rows[headerIdx].map(h => (h || '').trim());
       const findCol = (kw) => headers.findIndex(h => h.includes(kw));
@@ -370,13 +620,16 @@
       if (records.length > 0) {
         records.sort((a, b) => new Date(a.date) - new Date(b.date));
         bodyWeightHistory = records;
-        console.log("Body_Log 成功讀取 " + records.length + " 筆數據，最新體重：" + records[records.length - 1].weight + " kg");
+      } else {
+        bodyWeightHistory = currentUser === 'jj' ? [...PROFILES.jj.fallbackBodyLog] : [];
       }
       updateBodyCompositionUI();
     }
 
     function getEstimatedBodyWeight(dateStr) {
-      if (!bodyWeightHistory || bodyWeightHistory.length === 0) return 77.7;
+      if (!bodyWeightHistory || bodyWeightHistory.length === 0) {
+        return currentUser === 'yu' ? 52.0 : 77.7;
+      }
       const targetTime = new Date(dateStr).getTime();
       if (isNaN(targetTime)) return bodyWeightHistory[bodyWeightHistory.length - 1].weight;
 
@@ -397,7 +650,20 @@
     }
 
     function updateBodyCompositionUI() {
-      if (!bodyWeightHistory || bodyWeightHistory.length === 0) return;
+      if (!bodyWeightHistory || bodyWeightHistory.length === 0) {
+        document.getElementById('inbodyLatestDate').innerText = `最新測量：尚無資料`;
+        document.getElementById('kpiBodyWeight').innerText = '-';
+        document.getElementById('kpiBodyWeightDiff').innerText = '-';
+        document.getElementById('kpiSMM').innerText = '-';
+        document.getElementById('kpiSMMDiff').innerText = '-';
+        document.getElementById('kpiPBF').innerText = '-';
+        document.getElementById('kpiPBFDiff').innerText = '-';
+        document.getElementById('kpiScore').innerText = '-';
+        document.getElementById('kpiVFA').innerText = '-';
+        renderEmptyBodyCompositionCharts();
+        return;
+      }
+
       const latest = bodyWeightHistory[bodyWeightHistory.length - 1];
       const prev = bodyWeightHistory.length > 1 ? bodyWeightHistory[bodyWeightHistory.length - 2] : null;
 
@@ -407,6 +673,8 @@
         const diff = (latest.weight - prev.weight).toFixed(1);
         const sign = diff > 0 ? `+${diff}` : `${diff}`;
         document.getElementById('kpiBodyWeightDiff').innerText = `較上次 (${prev.date.slice(5)}): ${sign} kg`;
+      } else {
+        document.getElementById('kpiBodyWeightDiff').innerText = '初次測量基準';
       }
 
       document.getElementById('kpiSMM').innerText = latest.smm || '-';
@@ -414,6 +682,8 @@
         const diff = (latest.smm - prev.smm).toFixed(1);
         const sign = diff > 0 ? `+${diff}` : `${diff}`;
         document.getElementById('kpiSMMDiff').innerText = `較上次: ${sign} kg ${diff > 0 ? '🔥' : ''}`;
+      } else {
+        document.getElementById('kpiSMMDiff').innerText = '-';
       }
 
       document.getElementById('kpiPBF').innerText = latest.pbf || '-';
@@ -421,6 +691,8 @@
         const diff = (latest.pbf - prev.pbf).toFixed(1);
         const sign = diff > 0 ? `+${diff}` : `${diff}`;
         document.getElementById('kpiPBFDiff').innerText = `較上次: ${sign} % ${diff < 0 ? '📉' : ''}`;
+      } else {
+        document.getElementById('kpiPBFDiff').innerText = '-';
       }
 
       document.getElementById('kpiScore').innerText = latest.score || '-';
@@ -429,7 +701,30 @@
       renderBodyCompositionCharts();
     }
 
+    function renderEmptyBodyCompositionCharts() {
+      ['weightOnlyChart', 'muscleFatChart', 'bodyFatChart'].forEach(id => {
+        const ctx = document.getElementById(id).getContext('2d');
+        const inst = Chart.getChart(ctx);
+        if (inst) inst.destroy();
+        new Chart(ctx, {
+          type: 'line',
+          data: { labels: ['尚無數據'], datasets: [{ data: [0], borderColor: '#cbd5e1' }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            scales: { y: { display: false }, x: { display: false } }
+          }
+        });
+      });
+    }
+
     function renderBodyCompositionCharts() {
+      if (!bodyWeightHistory || bodyWeightHistory.length === 0) return;
+
       const labels = bodyWeightHistory.map(b => b.date.slice(5));
       const weights = bodyWeightHistory.map(b => b.weight);
       const smms = bodyWeightHistory.map(b => b.smm);
@@ -437,8 +732,20 @@
       const pbfs = bodyWeightHistory.map(b => b.pbf);
       const vfas = bodyWeightHistory.map(b => b.vfa);
 
+      const validW = weights.filter(w => typeof w === 'number' && !isNaN(w));
+      const minW = validW.length ? Math.floor(Math.min(...validW) - 1.5) : 50;
+      const maxW = validW.length ? Math.ceil(Math.max(...validW) + 1.5) : 80;
+
+      const validSMM = smms.filter(v => typeof v === 'number' && !isNaN(v));
+      const validFat = fats.filter(v => typeof v === 'number' && !isNaN(v));
+      const allMF = [...validSMM, ...validFat];
+      const minMF = allMF.length ? Math.max(0, Math.floor(Math.min(...allMF) - 2)) : 10;
+      const maxMF = allMF.length ? Math.ceil(Math.max(...allMF) + 2) : 35;
+
+      const activeColor = PROFILES[currentUser].primaryColor;
+
       // -------------------------------------------------------------
-      // Chart 1: 體重專屬折線圖 (獨立 Y 軸，不被其他數值稀釋)
+      // Chart 1: 體重專屬折線圖
       // -------------------------------------------------------------
       const ctxWeight = document.getElementById('weightOnlyChart').getContext('2d');
       if (weightOnlyChartInstance) weightOnlyChartInstance.destroy();
@@ -449,13 +756,13 @@
           datasets: [{
             label: '體重 (Weight, kg)',
             data: weights,
-            borderColor: '#334155', // slate-700
-            backgroundColor: 'rgba(51, 65, 85, 0.08)',
+            borderColor: activeColor,
+            backgroundColor: currentUser === 'yu' ? 'rgba(225, 29, 72, 0.08)' : 'rgba(51, 65, 85, 0.08)',
             fill: true,
             tension: 0.3,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: '#334155',
+            pointBackgroundColor: activeColor,
             borderWidth: 2.5
           }]
         },
@@ -474,8 +781,8 @@
             y: {
               grid: { color: '#f1f5f9' },
               title: { display: true, text: 'kg' },
-              suggestedMin: 70,
-              suggestedMax: 80
+              suggestedMin: minW,
+              suggestedMax: maxW
             },
             x: { grid: { display: false } }
           }
@@ -483,7 +790,7 @@
       });
 
       // -------------------------------------------------------------
-      // Chart 2: 骨骼肌重 vs 體脂肪重 (同量級 15~35kg 對比)
+      // Chart 2: 骨骼肌重 vs 體脂肪重
       // -------------------------------------------------------------
       const ctxMuscleFat = document.getElementById('muscleFatChart').getContext('2d');
       if (muscleFatChartInstance) muscleFatChartInstance.destroy();
@@ -495,19 +802,19 @@
             {
               label: '骨骼肌重 (SMM, kg)',
               data: smms,
-              borderColor: '#4f46e5', // Indigo-600
-              backgroundColor: 'rgba(79, 70, 229, 0.08)',
+              borderColor: currentUser === 'yu' ? '#db2777' : '#4f46e5',
+              backgroundColor: currentUser === 'yu' ? 'rgba(219, 39, 119, 0.08)' : 'rgba(79, 70, 229, 0.08)',
               fill: true,
               tension: 0.3,
               pointRadius: 5,
               pointHoverRadius: 7,
-              pointBackgroundColor: '#4f46e5',
+              pointBackgroundColor: currentUser === 'yu' ? '#db2777' : '#4f46e5',
               borderWidth: 2.5
             },
             {
               label: '體脂肪重 (Fat Mass, kg)',
               data: fats,
-              borderColor: '#f43f5e', // Rose-500
+              borderColor: '#f43f5e',
               borderDash: [4, 4],
               backgroundColor: 'transparent',
               tension: 0.3,
@@ -541,8 +848,8 @@
             y: {
               grid: { color: '#f1f5f9' },
               title: { display: true, text: 'kg' },
-              suggestedMin: 15,
-              suggestedMax: 35
+              suggestedMin: minMF,
+              suggestedMax: maxMF
             },
             x: { grid: { display: false } }
           }
@@ -609,9 +916,18 @@
     // 🏋️ 處理 Log 訓練紀錄
     // ==========================================
     function processCSVData(csvText, isLive = false) {
+      if (!csvText) {
+        parsedHistory = [];
+        updateWorkoutUI(isLive);
+        return;
+      }
       const parsed = Papa.parse(csvText.trim(), { header: false, skipEmptyLines: true });
       const rows = parsed.data;
-      if (!rows || rows.length === 0) return;
+      if (!rows || rows.length === 0) {
+        parsedHistory = [];
+        updateWorkoutUI(isLive);
+        return;
+      }
 
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
@@ -623,7 +939,8 @@
       }
 
       if (headerIdx === -1) {
-        console.error("找不到訓練標頭列");
+        parsedHistory = [];
+        updateWorkoutUI(isLive);
         return;
       }
 
@@ -676,53 +993,85 @@
     }
 
     function updateWorkoutUI(isLive) {
-      if (parsedHistory.length === 0) return;
+      const banner = document.getElementById('wifeNoticeBanner');
+      if (parsedHistory.length === 0) {
+        document.getElementById('statusText').innerText = isLive 
+          ? `雲端連動成功 (尚未有訓練紀錄)` 
+          : (currentUser === 'yu' ? `未連線 (請確認發布或共用)` : `離線模式`);
+        document.getElementById('tableSub').innerText = `目前無訓練紀錄`;
+
+        // 提示小禹 banner
+        if (currentUser === 'yu' && banner) {
+          banner.classList.remove('hidden');
+        }
+
+        resetStrengthKPICards();
+        populateExerciseDropdown();
+        renderEmptyWorkoutCharts();
+        renderRecentTable(null);
+        return;
+      }
+
+      if (banner) banner.classList.add('hidden');
 
       const latestDate = parsedHistory[parsedHistory.length - 1].date;
       document.getElementById('statusText').innerText = isLive 
         ? `雲端即時連動中 (最新: ${latestDate})` 
-        : `離線快照預覽中 (最新: ${latestDate})`;
+        : `離線數據預覽中 (最新: ${latestDate})`;
       document.getElementById('tableSub').innerText = `訓練日期：${latestDate}`;
 
       updateStrengthKPICards();
       populateExerciseDropdown();
 
-      const selectedExercise = document.getElementById('exerciseSelect').value || '槓鈴臥推';
+      const selectedExercise = document.getElementById('exerciseSelect').value || parsedHistory[0].exercise;
       renderProgressionChart(selectedExercise);
       renderVolumeChart();
       renderCategoryChart();
       renderRecentTable(latestDate);
     }
 
+    function resetStrengthKPICards() {
+      ['Squat', 'Bench', 'RDL', 'Core'].forEach(id => {
+        document.getElementById('kpi' + id).innerText = '-';
+        document.getElementById('kpi' + id + 'Sub').innerText = '-';
+      });
+    }
+
     function updateStrengthKPICards() {
       const getBest = (nameRegex) => {
-        let best = { weight: 0, reps: 0, date: '' };
+        let best = { weight: 0, reps: 0, date: '', name: '' };
         parsedHistory.filter(r => nameRegex.test(r.exercise)).forEach(r => {
           r.sets.forEach(s => {
             if (s.weight > best.weight || (s.weight === best.weight && s.reps > best.reps)) {
-              best = { weight: s.weight, reps: s.reps, date: r.date };
+              best = { weight: s.weight, reps: s.reps, date: r.date, name: r.exercise };
             }
           });
         });
         return best;
       };
 
-      const squat = getBest(/深蹲/);
-      const bench = getBest(/槓鈴臥推/);
-      const rdl = getBest(/RDL/);
-      const core = getBest(/捲腹/);
+      const squat = getBest(/深蹲|分腿蹲|腿推/);
+      const bench = getBest(/臥推|胸推|肩推/);
+      const rdl = getBest(/RDL|臀推|硬舉/);
+      const core = getBest(/捲腹|核心|下拉|划船/);
 
-      document.getElementById('kpiSquat').innerText = squat.weight || '-';
-      document.getElementById('kpiSquatSub').innerText = squat.weight ? `${squat.reps} reps (${squat.date.slice(5)})` : '-';
+      const colorClass = currentUser === 'yu' ? 'text-rose-600' : 'text-indigo-600';
 
-      document.getElementById('kpiBench').innerText = bench.weight || '-';
-      document.getElementById('kpiBenchSub').innerText = bench.weight ? `${bench.reps} reps (${bench.date.slice(5)})` : '-';
+      const updateCard = (key, data, defaultTitle) => {
+        const titleEl = document.getElementById('kpi' + key + 'Title');
+        const valEl = document.getElementById('kpi' + key);
+        const subEl = document.getElementById('kpi' + key + 'Sub');
 
-      document.getElementById('kpiRDL').innerText = rdl.weight || '-';
-      document.getElementById('kpiRDLSub').innerText = rdl.weight ? `${rdl.reps} reps (${rdl.date.slice(5)})` : '-';
+        if (titleEl) titleEl.innerText = data.name ? `${data.name} 巔峰` : defaultTitle;
+        valEl.innerText = data.weight || '-';
+        valEl.className = `text-3xl font-black ${colorClass}`;
+        subEl.innerText = data.weight ? `${data.reps} reps (${data.date.slice(5)})` : '-';
+      };
 
-      document.getElementById('kpiCore').innerText = core.weight || '-';
-      document.getElementById('kpiCoreSub').innerText = core.weight ? `${core.reps} reps (${core.date.slice(5)})` : '-';
+      updateCard('Squat', squat, '深蹲 / 下肢 巔峰');
+      updateCard('Bench', bench, '臥推 / 上肢推 巔峰');
+      updateCard('RDL', rdl, 'RDL / 硬舉 巔峰');
+      updateCard('Core', core, '核心 / 上肢拉 巔峰');
     }
 
     function populateExerciseDropdown() {
@@ -731,7 +1080,14 @@
       const exSet = new Set(parsedHistory.map(r => r.exercise));
       select.innerHTML = '';
 
-      const priority = ['槓鈴臥推', '槓鈴深蹲', '槓鈴RDL', '保加利亞分腿蹲', '輔助引體向上', '負重倒掛捲腹', '胸推機', '繩索Face pull'];
+      if (exSet.size === 0) {
+        const opt = document.createElement('option');
+        opt.innerText = '尚無紀錄動作';
+        select.appendChild(opt);
+        return;
+      }
+
+      const priority = PROFILES[currentUser].priorityExercises;
       const sortedEx = Array.from(exSet).sort((a, b) => {
         const idxA = priority.indexOf(a);
         const idxB = priority.indexOf(b);
@@ -753,6 +1109,24 @@
       }
     }
 
+    function renderEmptyWorkoutCharts() {
+      ['progressionChart', 'volumeChart', 'categoryChart'].forEach(id => {
+        const ctx = document.getElementById(id).getContext('2d');
+        const inst = Chart.getChart(ctx);
+        if (inst) inst.destroy();
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels: ['尚無紀錄'], datasets: [{ data: [0], backgroundColor: '#e2e8f0' }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { y: { display: false }, x: { display: false } }
+          }
+        });
+      });
+    }
+
     function renderProgressionChart(exerciseName) {
       const filtered = parsedHistory.filter(r => r.exercise === exerciseName);
       const labels = filtered.map(r => r.date.slice(5));
@@ -760,8 +1134,14 @@
       const ctx = document.getElementById('progressionChart').getContext('2d');
       if (progressionChartInstance) progressionChartInstance.destroy();
 
+      if (filtered.length === 0) {
+        renderEmptyWorkoutCharts();
+        return;
+      }
+
       const isPullup = exerciseName.includes('引體向上');
       let chartData, chartOptions;
+      const activeColor = PROFILES[currentUser].primaryColor;
 
       if (isPullup) {
         const netLiftWeights = [];
@@ -783,13 +1163,13 @@
             {
               label: '真實背部淨拉力 (當期體重 - 輔助配重, kg)',
               data: netLiftWeights,
-              borderColor: '#e11d48',
-              backgroundColor: 'rgba(225, 29, 72, 0.1)',
+              borderColor: activeColor,
+              backgroundColor: currentUser === 'yu' ? 'rgba(225, 29, 72, 0.1)' : 'rgba(79, 70, 229, 0.1)',
               fill: true,
               tension: 0.3,
               pointRadius: 6,
               pointHoverRadius: 8,
-              pointBackgroundColor: '#e11d48',
+              pointBackgroundColor: activeColor,
               yAxisID: 'y'
             },
             {
@@ -819,7 +1199,7 @@
                   const idx = contexts[0].dataIndex;
                   const rec = filtered[idx];
                   return [
-                    `當期體重 (Body_Log): ${bodyWeights[idx]} kg`,
+                    `當期體重: ${bodyWeights[idx]} kg`,
                     `最低輔助配重: ${minAssistWeights[idx]} kg`,
                     `實際背部負重: ${netLiftWeights[idx]} kg`,
                     '組數紀錄: ' + rec.sets.map(s => s.raw).join(' | ')
@@ -853,13 +1233,13 @@
           datasets: [{
             label: `${exerciseName} 最高重量 (kg)`,
             data: dataWeights,
-            borderColor: '#4f46e5',
-            backgroundColor: 'rgba(79, 70, 229, 0.08)',
+            borderColor: activeColor,
+            backgroundColor: currentUser === 'yu' ? 'rgba(225, 29, 72, 0.08)' : 'rgba(79, 70, 229, 0.08)',
             fill: true,
             tension: 0.3,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: '#4f46e5'
+            pointBackgroundColor: activeColor
           }]
         };
 
@@ -903,6 +1283,8 @@
       const ctx = document.getElementById('volumeChart').getContext('2d');
       if (volumeChartInstance) volumeChartInstance.destroy();
 
+      const barColor = currentUser === 'yu' ? '#f43f5e' : '#6366f1';
+
       volumeChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -910,7 +1292,7 @@
           datasets: [{
             label: '單日總容量 (kg)',
             data: volumes,
-            backgroundColor: '#6366f1',
+            backgroundColor: barColor,
             borderRadius: 8
           }]
         },
@@ -959,6 +1341,11 @@
       const tbody = document.getElementById('recentTableBody');
       tbody.innerHTML = '';
 
+      if (!targetDate || parsedHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">目前尚無此使用者的訓練紀錄，點選上方試算表連結即可開始記錄！</td></tr>`;
+        return;
+      }
+
       const dayLogs = parsedHistory.filter(r => r.date === targetDate);
       dayLogs.forEach(r => {
         const tr = document.createElement('tr');
@@ -989,16 +1376,28 @@
     // 🌐 雙 CSV 抓取與連動主邏輯
     // ==========================================
     function fetchLatestData() {
+      const profile = PROFILES[currentUser];
       const text = document.getElementById('statusText');
       text.innerText = "連線更新中...";
 
-      const weightPromise = (WEIGHT_CSV_URL && !WEIGHT_CSV_URL.includes("placeholder"))
-        ? fetch(WEIGHT_CSV_URL + '&t=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null)
+      // 重設目前使用者的暫存資料
+      if (currentUser === 'jj') {
+        bodyWeightHistory = [...profile.fallbackBodyLog];
+      } else {
+        bodyWeightHistory = [];
+      }
+      parsedHistory = [];
+
+      const weightUrl = profile.weightCsvUrl;
+      const sheetUrl = profile.sheetCsvUrl;
+
+      const weightPromise = (weightUrl && !weightUrl.includes("placeholder"))
+        ? fetch(weightUrl + (weightUrl.includes('?') ? '&' : '?') + 't=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null)
         : Promise.resolve(null);
 
-      const sheetPromise = (!SHEET_CSV_URL || SHEET_CSV_URL.includes("placeholder"))
-        ? Promise.resolve(null)
-        : fetch(SHEET_CSV_URL + '&t=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null);
+      const sheetPromise = (sheetUrl && !sheetUrl.includes("placeholder"))
+        ? fetch(sheetUrl + (sheetUrl.includes('?') ? '&' : '?') + 't=' + Date.now()).then(r => r.ok ? r.text() : null).catch(() => null)
+        : Promise.resolve(null);
 
       Promise.all([weightPromise, sheetPromise]).then(([weightCsv, sheetCsv]) => {
         if (weightCsv) {
@@ -1010,15 +1409,21 @@
         if (sheetCsv) {
           processCSVData(sheetCsv, true);
         } else {
-          processCSVData(FALLBACK_LOG_CSV, false);
-          if (SHEET_CSV_URL && !SHEET_CSV_URL.includes("placeholder")) {
-            text.innerText = "已回退至離線數據 (請檢查 Google Sheet 發布連結)";
-          }
+          processCSVData(null, false);
         }
       });
     }
 
-    window.addEventListener('DOMContentLoaded', fetchLatestData);
+    // 初始化時根據 URL 參數選擇使用者 (?user=yu 或 ?user=jj)
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const u = params.get('user');
+      if (u === 'yu' || u === 'wife' || u === 'xiaoyu') {
+        switchUser('yu', false);
+      } else {
+        switchUser('jj', false);
+      }
+    });
   </script>
 </body>
 </html>
