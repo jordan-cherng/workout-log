@@ -781,8 +781,18 @@
 2026-11-15,繩索坐姿划船,20kg * 10,25kg * 10,25kg * 10,,`;
 
     const WIFE_SPREADSHEET_ID = "1hjaDFleXlGgdBcb-LInjFLOxfgxf43Tuy39Ngs1GZgg";
-    const WIFE_DEFAULT_SHEET_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1444351328`;
-    const WIFE_DEFAULT_WEIGHT_CSV = `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/export?format=csv&gid=1338938678`;
+    const WIFE_DEFAULT_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTvyvCfDJcYsd4vpFFGdq30QDse5xLnGIBqQaLO3kslSESygi_fDPfre78HYGL57eLwP3qoA8t0QgGj/pub?gid=1444351328&single=true&output=csv";
+    const WIFE_DEFAULT_WEIGHT_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTvyvCfDJcYsd4vpFFGdq30QDse5xLnGIBqQaLO3kslSESygi_fDPfre78HYGL57eLwP3qoA8t0QgGj/pub?gid=1338938678&single=true&output=csv";
+
+    function getStoredOrDefault(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        if (!val || val.includes('/export?')) return fallback;
+        return val;
+      } catch (e) {
+        return fallback;
+      }
+    }
 
     const PROFILES = {
       jj: {
@@ -808,8 +818,8 @@
         emoji: '👩',
         headerEmoji: '🏋️‍♀️',
         sheetUrl: `https://docs.google.com/spreadsheets/d/${WIFE_SPREADSHEET_ID}/edit`,
-        sheetCsvUrl: localStorage.getItem('workout_yu_sheet_csv') || WIFE_DEFAULT_SHEET_CSV,
-        weightCsvUrl: localStorage.getItem('workout_yu_weight_csv') || WIFE_DEFAULT_WEIGHT_CSV,
+        sheetCsvUrl: getStoredOrDefault('workout_yu_sheet_csv', WIFE_DEFAULT_SHEET_CSV),
+        weightCsvUrl: getStoredOrDefault('workout_yu_weight_csv', WIFE_DEFAULT_WEIGHT_CSV),
         fallbackBodyLog: FALLBACK_BODY_LOG_YU,
         fallbackLogCsv: FALLBACK_LOG_CSV_YU,
         primaryColor: '#e11d48',
