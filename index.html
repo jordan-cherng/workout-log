@@ -375,6 +375,17 @@
                 🔍 立即測試這組網址連線
               </button>
               <div id="testResultMsg" class="mt-2 hidden text-xs p-2.5 rounded-lg"></div>
+            
+            <div id="phoneSyncCard" class="hidden mt-3 p-3 bg-indigo-50/80 border border-indigo-200 rounded-xl space-y-2 text-xs text-indigo-950">
+              <div class="flex justify-between items-center font-bold">
+                <span class="flex items-center"><span class="mr-1">📲</span>手機一鍵同步專屬網址</span>
+                <button type="button" onclick="copyPhoneSyncLink()" id="btnCopyPhone" class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-[11px] font-semibold transition">📋 複製連結</button>
+              </div>
+              <p class="text-[11px] text-indigo-700 leading-relaxed">
+                在電腦點「複製連結」傳到手機（或太太的手機），在手機點開一次即永久綁定同步，不再需要手動貼網址！
+              </p>
+              <input id="inputPhoneSyncLink" type="text" readonly onclick="this.select()" class="w-full p-2 bg-white border border-indigo-200 rounded-lg text-[11px] font-mono text-slate-700 select-all">
+            </div>
             </div>
           </div>
 
@@ -948,9 +959,40 @@
       }
     }
 
+    function updatePhoneSyncCard() {
+      const match = (PROFILES.yu.sheetCsvUrl + " " + PROFILES.yu.weightCsvUrl).match(/2PACX-[a-zA-Z0-9_\-]+/);
+      const card = document.getElementById('phoneSyncCard');
+      const input = document.getElementById('inputPhoneSyncLink');
+      if (match && card && input) {
+        const key = match[0];
+        const syncUrl = `${window.location.origin}${window.location.pathname}?user=yu&pub=${key}`;
+        input.value = syncUrl;
+        card.classList.remove('hidden');
+      }
+    }
+
+    function copyPhoneSyncLink() {
+      const input = document.getElementById('inputPhoneSyncLink');
+      const btn = document.getElementById('btnCopyPhone');
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        btn.innerText = "已複製！";
+        btn.className = "px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-semibold transition";
+        setTimeout(() => {
+          btn.innerText = "📋 複製連結";
+          btn.className = "px-2.5 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-[11px] font-semibold transition";
+        }, 2000);
+      }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        alert("已複製專屬手機同步網址！傳至手機開啟即可自動同步。");
+      });
+    }
+
     function openSettingsModal() {
       document.getElementById('inputWifeSheetCsv').value = PROFILES.yu.sheetCsvUrl;
       document.getElementById('inputWifeWeightCsv').value = PROFILES.yu.weightCsvUrl;
+      updatePhoneSyncCard();
       document.getElementById('settingsModal').classList.remove('hidden');
     }
 
@@ -979,6 +1021,7 @@
         localStorage.setItem('workout_yu_weight_csv', weightUrl);
       }
 
+      updatePhoneSyncCard();
       closeSettingsModal();
       fetchLatestData();
     }
@@ -1928,9 +1971,26 @@
       });
     }
 
-    // 初始化時根據 URL 參數選擇使用者 (?user=yu 或 ?user=jj)
+    // 初始化時根據 URL 參數選擇使用者 (?user=yu 或 ?user=jj)，並支援一鍵同步 (?pub=2PACX...)
     window.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams(window.location.search);
+
+      // 若網址帶有 pub 發布金鑰，自動為該裝置一鍵綁定並持久化儲存到 localStorage
+      const pubParam = params.get('pub');
+      if (pubParam) {
+        const matchKey = pubParam.match(/2PACX-[a-zA-Z0-9_\-]+/);
+        if (matchKey) {
+          const key = matchKey[0];
+          const sUrl = `https://docs.google.com/spreadsheets/d/e/${key}/pub?gid=1444351328&single=true&output=csv`;
+          const wUrl = `https://docs.google.com/spreadsheets/d/e/${key}/pub?gid=1338938678&single=true&output=csv`;
+          localStorage.setItem('workout_yu_sheet_csv', sUrl);
+          localStorage.setItem('workout_yu_weight_csv', wUrl);
+          PROFILES.yu.sheetCsvUrl = sUrl;
+          PROFILES.yu.weightCsvUrl = wUrl;
+          console.log("已透過專屬連結自動為本機設定小禹發布網址！");
+        }
+      }
+
       const u = params.get('user');
       if (u === 'yu' || u === 'wife' || u === 'xiaoyu') {
         switchUser('yu', false);
